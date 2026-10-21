@@ -16,7 +16,6 @@
     <b>RNN（再帰型ニューラルネットワーク）</b>は、同じニューロンを<b>時刻ごとに繰り返し使い</b>、前の時刻の「記憶」（隠れ状態）を次の時刻へ渡します。
     ただし、記憶は毎回上書きされるので、<b>遠い過去を覚えておくのが苦手</b>です（勾配消失）。
   </div>
-  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
   <div class="code">// RNN の 1 ステップ（毎時刻、同じ W を使う）
 h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
 // h_t = 「いままで読んだ内容の要約」（隠れ状態）
@@ -80,6 +79,7 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/seq.js"></script>
 <script src="../assets/js/seqwidget.js"></script>

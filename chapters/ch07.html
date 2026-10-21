@@ -16,7 +16,6 @@
     「どれだけ忘れるか」「どれだけ書き込むか」「どれだけ読み出すか」を 0〜1 で制御する <b>3 つのゲート</b>を持ちます。
     記憶セルへの足し算の道は、第4章の残差接続と同じ「勾配の高速道路」になります。
   </div>
-  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
   <div class="code">f = σ(…)  忘却ゲート：前の記憶をどれだけ残すか（1=全部残す）
 i = σ(…)  入力ゲート：新しい情報をどれだけ書き込むか
 o = σ(…)  出力ゲート：記憶のうちどれだけ外に出すか
@@ -90,6 +89,7 @@ h_t = o * tanh(c_t)</div>
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/seq.js"></script>
 <script src="../assets/js/seqwidget.js"></script>

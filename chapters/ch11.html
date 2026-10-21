@@ -16,7 +16,6 @@
     各単語が文中の<b>すべての単語</b>に注意を向ける<b>自己注意（Self-Attention）</b>を、見る観点の違う<b>複数のヘッド</b>で同時に行い、
     RNN のように 1 語ずつ待たずに<b>全単語を一度に（並列に）</b>計算できます。順番の情報は<b>位置エンコーディング</b>で足します。
   </div>
-  <p class="video-ref">動画の対応箇所：47:30〜「Transformer, BERT and GPT」</p>
   <div class="code">// 1 つの Transformer ブロック
 X  = 埋め込み + 位置エンコーディング
 Q = X·Wq,  K = X·Wk,  V = X·Wv            （ヘッドごとに別の W）
@@ -84,6 +83,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script>
 (function () {

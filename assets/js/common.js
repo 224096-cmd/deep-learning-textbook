@@ -100,6 +100,45 @@ var DL = (function () {
       el("p", { class: "muted", text: "動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究" })
     ]);
     document.body.appendChild(footer);
+
+    // ---- 補足コンテンツの差し込み（content.js） ----
+    var C = (typeof DL_CONTENT !== "undefined") ? DL_CONTENT[no] : null;
+    var main = document.querySelector("main");
+    if (C && main) {
+      var mm = Math.floor(C.time / 60), ss = C.time % 60;
+      var hero = el("section", { class: "chapter-hero" }, [
+        el("div", { class: "hero-num", text: String(no) }),
+        el("div", { class: "hero-text" }, [
+          el("div", { class: "hero-title", text: ch.title + " " }, [el("span", { class: "hero-en", text: ch.en })]),
+          el("p", { class: "hero-tagline", text: C.icon + " " + C.tagline })
+        ]),
+        el("div", { class: "hero-meta" }, [
+          el("span", { class: "chip", text: "⏱ 約 " + C.minutes + " 分" }),
+          el("a", { class: "chip chip-link", href: "https://youtu.be/wbc-oxFFV9c?t=" + C.time, target: "_blank", rel: "noopener", text: "▶ 動画 " + mm + ":" + (ss < 10 ? "0" : "") + ss + " から" })
+        ])
+      ]);
+      main.insertBefore(hero, main.firstChild);
+      var goal = main.querySelector(".goal");
+      if (goal) {
+        var extra = el("div", { class: "extra-grid" }, [
+          el("div", { class: "box box-analogy" }, [el("h4", { text: "💡 身近なたとえ" }), el("p", { text: C.analogy })]),
+          el("div", { class: "box box-uses" }, [el("h4", { text: "🌍 どこで使われている？" }), el("ul", {}, C.uses.map(function (u) { return el("li", { text: u }); }))])
+        ]);
+        goal.parentNode.insertBefore(extra, goal.nextSibling);
+      }
+      var quizCard = main.querySelector("[id^=quiz]"); if (quizCard) quizCard = quizCard.closest("section");
+      var wrap = el("section", { class: "card card-review" }, [
+        el("h2", { text: "ふりかえり：この章の 3 つのポイント" }),
+        el("ol", { class: "takeaways" }, C.takeaways.map(function (t) { return el("li", { text: t }); })),
+        el("p", { class: "muted", text: "次の小テストで確かめましょう。" })
+      ]);
+      if (quizCard) main.insertBefore(wrap, quizCard); else main.appendChild(wrap);
+      // セクション見出しにタグを付ける
+      Array.prototype.forEach.call(main.querySelectorAll(".card > h2"), function (h) {
+        var t = h.textContent, tag = /^体験|^まず/.test(t) ? "やってみる" : /^コード/.test(t) ? "コード" : /^小テスト/.test(t) ? "テスト" : /^ふりかえり/.test(t) ? "まとめ" : /^この章/.test(t) ? "ねらい" : /^記録/.test(t) ? "記録" : null;
+        if (tag) h.insertBefore(el("span", { class: "sec-tag tag-" + tag, text: tag }), h.firstChild);
+      });
+    }
     log(no, "open", {});
   }
 
@@ -180,6 +219,7 @@ var DL = (function () {
   function quiz(containerId, chapter, questions) {
     var c = $(containerId);
     if (!c) return;
+    if (typeof DL_CONTENT !== "undefined" && DL_CONTENT[chapter] && DL_CONTENT[chapter].quiz) questions = questions.concat(DL_CONTENT[chapter].quiz);
     c.innerHTML = "";
     var form = el("div", { class: "quiz" });
     questions.forEach(function (qq, qi) {

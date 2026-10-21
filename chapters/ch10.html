@@ -16,7 +16,6 @@
     デコーダが 1 語出すたびに、「入力文のどの単語を見ればよいか」を<b>重み（合計 1）</b>で決め、その重みで入力側の情報を混ぜ合わせます。
     計算は「<b>問い合わせ（Query）</b>と<b>鍵（Key）</b>の似ている度合い → softmax で重みに → <b>値（Value）</b>の重み付き平均」の 3 ステップだけです。
   </div>
-  <p class="video-ref">動画の対応箇所：39:30〜「Seq2Seq and Attention」</p>
   <div class="code">score_i = Q · K_i                 似ている度合い（内積）
 w_i     = softmax(score)_i        合計 1 の重みにする
 出力    = Σ w_i · V_i              重みで値を混ぜる</div>
@@ -80,6 +79,7 @@ w_i     = softmax(score)_i        合計 1 の重みにする
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script>
 (function () {

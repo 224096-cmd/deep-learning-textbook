@@ -13,35 +13,38 @@
   </header>
 
   <main class="container">
-    <section class="card">
-      <h2>このサイトは何？</h2>
-      <p>
-        ChatGPT のような AI の土台になっている「ディープラーニング（深層学習）」のしくみを、
-        <b>自分で数字やスイッチを動かしながら</b>学べる教材です。
-        プログラミングの知識や難しい数学は必要ありません。中学生・高校生・大学生、どなたでも使えます。
-      </p>
-      <ul>
-        <li>インストール不要。パソコンでもスマートフォンでも、このページを開くだけで動きます。</li>
-        <li>各章は「<b>①要点とことばの意味</b> → <b>②さわって試す体験</b> → <b>③小テスト</b>」の順に進みます。</li>
-        <li>専門用語には短い説明を付けています。分からない言葉は点線の下線がある語を目印に読んでください。</li>
-        <li>動画 <a href="https://youtu.be/wbc-oxFFV9c" target="_blank" rel="noopener">「Give Me 1 Hour, I'll Make Deep Learning Click Forever」</a>（Zachary Huang 氏、英語）の内容に沿っています。動画と一緒に見るとより深く理解できます。</li>
-      </ul>
-    </section>
-
-    <section class="card">
-      <h2>おすすめの進め方</h2>
-      <ol>
-        <li><b>はじめての人</b>：第1章から順に。各章 15〜20 分くらいが目安です。</li>
-        <li><b>画像認識に興味がある人</b>：第1〜4章。</li>
-        <li><b>ChatGPT のしくみが知りたい人</b>：第5章 → 第9〜13章。</li>
-        <li>体験のあとは必ず小テストを。間違えても解説が出ます。何度でも挑戦できます。</li>
-      </ol>
-      <p class="muted">先生・研究者の方へ：学習者の操作や小テストの結果はこの端末の中だけに記録され、<a href="results.html">記録ページ</a>から CSV / JSON / Markdown で書き出せます。各章の実験データも同様に保存できます。</p>
-    </section>
+    <div class="intro-grid">
+      <section class="card">
+        <h2>このサイトは何？</h2>
+        <p>
+          ChatGPT のような AI の土台「ディープラーニング（深層学習）」のしくみを、
+          <b>自分で数字やスイッチを動かしながら</b>学べる教材です。
+          プログラミングの知識や難しい数学は必要ありません。中学生・高校生・大学生、どなたでも。
+        </p>
+        <ul>
+          <li>インストール不要。パソコンでもスマートフォンでも、このページを開くだけで動きます。</li>
+          <li>各章は「<b>ねらい</b> → <b>やってみる</b>（アニメーション・実験） → <b>コードで動かす</b> → <b>ふりかえり</b> → <b>小テスト</b>」。</li>
+          <li>動画 <a href="https://youtu.be/wbc-oxFFV9c" target="_blank" rel="noopener">「Give Me 1 Hour, I'll Make Deep Learning Click Forever」</a>（Zachary Huang 氏・英語）の流れに沿っています。各章の上に、動画の該当時間へのリンクがあります。</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>あなたの進み具合</h2>
+        <p id="prog-text" class="muted">まだ始めていません。第1章からどうぞ。</p>
+        <div class="progress-bar"><div id="prog-fill" style="width:0%"></div></div>
+        <div class="controls" id="prog-actions"></div>
+        <h3>おすすめの進め方</h3>
+        <ul style="margin:0">
+          <li><b>はじめての人</b>：第1章から順番に（1 章 15〜25 分）</li>
+          <li><b>画像認識に興味</b>：第1〜4章</li>
+          <li><b>ChatGPT のしくみが知りたい</b>：第5章 → 第9〜13章</li>
+        </ul>
+        <p class="muted" style="margin-top:10px">先生・研究者の方へ：操作や小テストの結果はこの端末の中だけに記録され、<a href="results.html">記録ページ</a>から書き出せます。</p>
+      </section>
+    </div>
 
     <section class="card">
       <h2>章の一覧</h2>
-      <ol id="chapter-list" class="chapter-list"></ol>
+      <div id="chapters"></div>
     </section>
 
     <section class="card">
@@ -56,31 +59,56 @@
     <p>動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究</p>
   </footer>
 
+  <script src="assets/js/content.js"></script>
   <script src="assets/js/common.js"></script>
   <script src="assets/js/main.js"></script>
   <script>
     (function () {
       var desc = {
-        1: "AI の最小単位「ニューロン」。線を動かして 2 色の点を分けてみる",
+        1: "線を動かして 2 色の点を分ける。AI の最小部品を 1 個だけ動かす",
         2: "ニューロンを重ねると曲がった線が引ける。なぜ「深い」と賢いのか",
-        3: "画像認識の基本。自分で描いた絵にフィルタをかけて模様を見つける",
+        3: "自分で描いた絵にフィルタをかけて模様を見つける画像認識の基本",
         4: "深くしすぎると学べなくなる？ それを直した「近道」のアイデア",
         5: "ことばを数字にする。「王 − 城 + 魚」で何が出てくる？",
-        6: "順番のあるデータ（文章・音声）を読む AI と、その「記憶」の弱点",
+        6: "順番のあるデータを読む AI と、その「記憶」の弱点",
         7: "記憶を守る「ゲート」のしくみ。手で動かして観察する",
         8: "LSTM をシンプルにした GRU。3 つのモデルで競争させる",
         9: "翻訳 AI の原型。文を 1 本のベクトルに詰め込む限界を実験",
         10: "ChatGPT の心臓部「注意」。矢印をドラッグして重みの変化を体感",
-        11: "Transformer のしくみ。全部の単語を同時に見る計算を実際に行う",
+        11: "全部の単語を同時に見る Transformer の計算を実際に行う",
         12: "穴埋め問題で学ぶ BERT。左右両方を見ると当たりやすい？",
         13: "次の文字を予測して文章を作る GPT。温度を変えて生成を比べる"
       };
-      var ol = document.getElementById("chapter-list"); ol.innerHTML = "";
-      DL.CHAPTERS.forEach(function (c) {
-        var li = document.createElement("li");
-        li.innerHTML = '<a href="chapters/' + c.file + '">第' + c.no + '章 ' + c.title + '</a><br><small>' + desc[c.no] + '</small>';
-        ol.appendChild(li);
+      var groups = [["画像と基本のしくみ", [1, 2, 3, 4]], ["ことばと順番のあるデータ", [5, 6, 7, 8]], ["翻訳から ChatGPT へ", [9, 10, 11, 12, 13]]];
+      // 進み具合（小テストを受けた章＝完了）
+      var log = DL.loadLog(), done = {}, lastOpen = null;
+      log.forEach(function (r) { if (r.event === "quiz") done[r.chapter] = true; if (r.event === "open" && r.chapter >= 1) lastOpen = r.chapter; });
+      var nDone = Object.keys(done).length;
+      var root = document.getElementById("chapters");
+      groups.forEach(function (g) {
+        root.appendChild(DL.el("div", { class: "ch-group", text: g[0] }));
+        var grid = DL.el("div", { class: "chapter-grid" });
+        g[1].forEach(function (no) {
+          var c = DL.CHAPTERS[no - 1], C = DL_CONTENT[no];
+          var a = DL.el("a", { href: "chapters/" + c.file, class: "ch-card" + (done[no] ? " done" : "") });
+          if (done[no]) a.appendChild(DL.el("span", { class: "ch-done", text: "✓ 済" }));
+          a.appendChild(DL.el("div", { class: "ch-no", text: String(no) }));
+          a.appendChild(DL.el("div", { class: "ch-title", text: C.icon + " " + c.title }));
+          a.appendChild(DL.el("div", { class: "ch-en", text: c.en }));
+          a.appendChild(DL.el("p", { class: "ch-desc", text: desc[no] }));
+          a.appendChild(DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "⏱ 約 " + C.minutes + " 分" }), DL.el("span", { text: "▶ 動画 " + Math.floor(C.time / 60) + ":" + (C.time % 60 < 10 ? "0" : "") + (C.time % 60) })]));
+          grid.appendChild(a);
+        });
+        root.appendChild(grid);
       });
+      document.getElementById("prog-fill").style.width = (nDone / 13 * 100) + "%";
+      if (nDone > 0 || lastOpen) {
+        document.getElementById("prog-text").textContent = "小テストまで終えた章：" + nDone + " / 13" + (lastOpen ? "　最後に開いた章：第" + lastOpen + "章" : "");
+        var next = lastOpen ? Math.min(13, (done[lastOpen] ? lastOpen + 1 : lastOpen)) : 1;
+        document.getElementById("prog-actions").appendChild(DL.el("a", { class: "btn", href: "chapters/" + DL.CHAPTERS[next - 1].file, text: "続きから：第" + next + "章 " + DL.CHAPTERS[next - 1].title + " →" }));
+      } else {
+        document.getElementById("prog-actions").appendChild(DL.el("a", { class: "btn", href: "chapters/ch01.html", text: "第1章から始める →" }));
+      }
     })();
   </script>
 </body>

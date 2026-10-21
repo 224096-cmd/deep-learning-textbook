@@ -15,7 +15,6 @@
     <b>GRU（ゲート付き回帰ユニット、2014）</b>は LSTM を簡略化したものです。記憶セル c と隠れ状態 h を 1 つにまとめ、ゲートも 3 つ → 2 つに減らしました。
     パラメータが少ないぶん計算が軽く、多くの課題で LSTM と同程度の性能が出ます。
   </div>
-  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
   <div class="code">z = σ(…)   更新ゲート：新しい情報にどれだけ置き換えるか（0=前の状態を保つ、1=全部置き換え）
 r = σ(…)   リセットゲート：候補を作るときに過去をどれだけ参照するか
 n = tanh( Wx·x + Wh·(r * h_{t-1}) + b )   候補
@@ -72,6 +71,7 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/seq.js"></script>
 <script src="../assets/js/seqwidget.js"></script>

@@ -16,7 +16,6 @@
     入力側の層に届く勾配がどんどん小さくなり、前の方の層がほとんど学習できなくなる現象です。
     <b>ResNet（2015）</b>は「層の出力に入力をそのまま足す」<b>残差接続（スキップ接続）</b>で、勾配の通り道を作りました。
   </div>
-  <p class="video-ref">動画の対応箇所：13:18〜「CNN and ResNet」</p>
   <div class="code">// 普通の層        h_next = f(W·h + b)
 // 残差接続つき     h_next = h + f(W·h + b)    ← 「変化分（残差）」だけ学習すればよい
 // 逆伝播では  ∂h_next/∂h = 1 + （小さい値）  となり、勾配が 1 のまま前へ素通りできる</div>
@@ -77,6 +76,7 @@
 </section>
 
 </main>
+<script src="../assets/js/content.js"></script>
 <script src="../assets/js/common.js"></script>
 <script>
 (function () {
