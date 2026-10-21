@@ -235,3 +235,38 @@ details.deeper ul { margin: 6px 0 4px; }
 .gl-item p { margin: 4px 0 0; font-size: 0.92rem; color: #334155; }
 .site-footer .ref { font-size: 0.75rem; color: #9ca3af; max-width: 720px; margin: 6px auto 0; }
 .site-footer .ref a { color: #9ca3af; }
+
+/* ---------- 体験エリア（ツールバー・フィールド・図） ---------- */
+.controls.toolbar { background: #f8fafc; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; gap: 10px 12px; align-items: flex-end; }
+.controls.toolbar + .controls.toolbar { margin-top: -8px; }
+.controls.toolbar label.field { display: flex; flex-direction: column; align-items: stretch; gap: 4px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; min-width: 150px; }
+.controls.toolbar label.field-range { min-width: 230px; }
+.field-name { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 600; color: #64748b; letter-spacing: 0.02em; gap: 10px; }
+.field-name .val { min-width: 0; font-size: 0.95rem; }
+.field-row { display: flex; align-items: center; gap: 8px; }
+.field-row input[type="range"] { width: 100%; flex: 1; height: 24px; margin: 0; }
+.field-row select, .field-row input[type="number"], .field-row input[type="text"] { width: 100%; border: none; padding: 2px 0; font-size: 1rem; background: transparent; }
+.field-row select { cursor: pointer; }
+.controls.toolbar label.field-check { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 0.95rem; gap: 8px; align-self: center; }
+.controls.toolbar label.field-check input { accent-color: var(--accent); width: 18px; height: 18px; }
+.controls.toolbar .btn { align-self: center; }
+.btn-primary { background: var(--accent); }
+.btn-ghost { background: #fff; color: #334155; border: 1px solid #cbd5e1; box-shadow: none; }
+.btn-ghost:hover { background: #f1f5f9; color: #0f172a; }
+.btn.running, .btn-primary.running { background: var(--rose); }
+.badge { display: inline-flex; align-items: center; gap: 6px; background: #eef2ff; color: #3730a3; border-radius: 999px; padding: 4px 12px; font-size: 0.88rem; font-weight: 500; }
+.badge:empty { display: none; }
+.figure { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05); margin: 6px 0 12px; }
+.figure canvas { border: none; border-radius: 0; margin: 0 auto; display: block; }
+.figure .figure-title { margin: 0; padding: 8px 14px; font-size: 0.92rem; font-weight: 600; color: #334155; background: #f8fafc; border-bottom: 1px solid var(--border); }
+.figure .figure-caption { margin: 0; padding: 8px 14px; font-size: 0.85rem; color: #64748b; background: #f8fafc; border-top: 1px solid var(--border); text-align: left; }
+.card > .figure > canvas { max-width: 100% !important; }
+.canvas-row > div > .figure { height: auto; }
+input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: #e2e8f0; border-radius: 999px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3); margin-top: -6px; cursor: pointer; }
+input[type="range"]::-moz-range-track { height: 6px; background: #e2e8f0; border-radius: 999px; }
+input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); border: 3px solid #fff; box-shadow: 0 1px 4px rgba(15, 23, 42, 0.3); cursor: pointer; }
+@media (max-width: 640px) {
+  .controls.toolbar label.field, .controls.toolbar label.field-range { min-width: 100%; }
+}

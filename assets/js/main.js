@@ -22,7 +22,7 @@ document.getElementById("check-btn").addEventListener("click", function () {
     "バイアス b = " + bias + "\n" +
     "重み付き和 z = " + sum.toFixed(3) + "\n" +
     "シグモイド σ(z) = " + out.toFixed(4) + "\n\n" +
-    "✅ JavaScript が正しく動いています（GitHub Pages 公開 OK）";
+    "JavaScript が正しく動いています（GitHub Pages 公開 OK）";
 
   document.getElementById("check-result").textContent = text;
 });

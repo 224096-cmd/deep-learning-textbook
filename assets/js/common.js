@@ -142,18 +142,18 @@ var DL = (function () {
         el("div", { class: "hero-num", text: String(no) }),
         el("div", { class: "hero-text" }, [
           el("div", { class: "hero-title", text: ch.title + " " }, [el("span", { class: "hero-en", text: ch.en })]),
-          el("p", { class: "hero-tagline", text: C.icon + " " + C.tagline })
+          el("p", { class: "hero-tagline", text: C.tagline })
         ]),
         el("div", { class: "hero-meta" }, [
-          el("span", { class: "chip", text: "⏱ 約 " + C.minutes + " 分" })
+          el("span", { class: "chip", text: "約 " + C.minutes + " 分" })
         ])
       ]);
       main.insertBefore(hero, main.firstChild);
       var goal = main.querySelector(".goal");
       if (goal) {
         var extra = el("div", { class: "extra-grid" }, [
-          el("div", { class: "box box-analogy" }, [el("h4", { text: "💡 身近なたとえ" }), el("p", { text: C.analogy })]),
-          el("div", { class: "box box-uses" }, [el("h4", { text: "🌍 どこで使われている？" }), el("ul", {}, C.uses.map(function (u) { return el("li", { text: u }); }))])
+          el("div", { class: "box box-analogy" }, [el("h4", { text: "身近なたとえ" }), el("p", { text: C.analogy })]),
+          el("div", { class: "box box-uses" }, [el("h4", { text: "どこで使われている？" }), el("ul", {}, C.uses.map(function (u) { return el("li", { text: u }); }))])
         ]);
         goal.parentNode.insertBefore(extra, goal.nextSibling);
       }
@@ -161,7 +161,7 @@ var DL = (function () {
       var wrap = el("section", { class: "card card-review" }, [
         el("h2", { text: "ふりかえり：この章の 3 つのポイント" }),
         el("ol", { class: "takeaways" }, C.takeaways.map(function (t) { return el("li", { text: t }); })),
-        C.deeper ? el("details", { class: "deeper" }, [el("summary", { text: "🚀 発展：もっと知りたい人へ" }), el("ul", {}, C.deeper.map(function (t) { return el("li", { text: t }); }))]) : el("span"),
+        C.deeper ? el("details", { class: "deeper" }, [el("summary", { text: "発展：もっと知りたい人へ" }), el("ul", {}, C.deeper.map(function (t) { return el("li", { text: t }); }))]) : el("span"),
         el("p", { class: "muted", text: "次の小テストで確かめましょう。" })
       ]);
       if (quizCard) main.insertBefore(wrap, quizCard); else main.appendChild(wrap);
@@ -171,7 +171,51 @@ var DL = (function () {
         if (tag) h.insertBefore(el("span", { class: "sec-tag tag-" + tag, text: tag }), h.firstChild);
       });
     }
+    polishUI(main || document);
     log(no, "open", {});
+  }
+
+  /* ---------- 体験部分の UI を整える ----------
+     ・.controls → ツールバー（ラベル付きの入力フィールド、主ボタン／副ボタン）
+     ・canvas + キャプション → 枠付きの図
+     ・.status → バッジ */
+  function polishUI(root) {
+    Array.prototype.forEach.call(root.querySelectorAll(".controls"), function (ctl) {
+      if (ctl.classList.contains("toolbar")) return;
+      ctl.classList.add("toolbar");
+      Array.prototype.forEach.call(ctl.querySelectorAll("label"), function (lab) {
+        var input = lab.querySelector("input, select"); if (!input) return;
+        var isCheck = input.type === "checkbox";
+        if (isCheck) { lab.classList.add("field-check"); return; }
+        // 先頭のテキストノードをラベル名に
+        var texts = []; Array.prototype.forEach.call(lab.childNodes, function (n) { if (n.nodeType === 3 && n.textContent.trim()) texts.push(n); });
+        var name = texts.length ? texts[0].textContent.replace(/[：:]\s*$/, "").trim() : "";
+        texts.forEach(function (n) { lab.removeChild(n); });
+        var val = lab.querySelector(".val");
+        var row = el("div", { class: "field-row" });
+        while (lab.firstChild) row.appendChild(lab.firstChild);
+        lab.appendChild(el("span", { class: "field-name", text: name })); lab.appendChild(row);
+        lab.classList.add("field"); if (input.type === "range") lab.classList.add("field-range");
+        if (val) { row.removeChild(val); lab.querySelector(".field-name").appendChild(val); }
+      });
+      Array.prototype.forEach.call(ctl.querySelectorAll("button.btn"), function (b) {
+        var t = b.textContent;
+        if (/リセット|初期化|戻す|消去|再計算|配置し直す|入れ替える|乱数/.test(t) && !/開始|学習|実行|再生/.test(t)) b.classList.add("btn-ghost");
+        else b.classList.add("btn-primary");
+      });
+    });
+    // 図を枠で囲む
+    Array.prototype.forEach.call(root.querySelectorAll("canvas"), function (cv) {
+      if (cv.closest(".figure") || cv.closest(".codepanel")) return;
+      var cap = cv.nextElementSibling && cv.nextElementSibling.classList.contains("canvas-caption") ? cv.nextElementSibling : null;
+      var titleEl = cv.previousElementSibling && cv.previousElementSibling.tagName === "P" && cv.previousElementSibling.querySelector("b") && cv.parentNode.classList.contains("canvas-row") === false && cv.parentNode.parentNode.classList.contains("canvas-row") ? cv.previousElementSibling : null;
+      var fig = el("div", { class: "figure" });
+      cv.parentNode.insertBefore(fig, cv);
+      if (titleEl) { titleEl.classList.add("figure-title"); fig.appendChild(titleEl); }
+      fig.appendChild(cv);
+      if (cap) { cap.classList.add("figure-caption"); fig.appendChild(cap); }
+    });
+    Array.prototype.forEach.call(root.querySelectorAll(".status"), function (st) { st.classList.add("badge"); });
   }
 
   /* ---------- 記録 ---------- */

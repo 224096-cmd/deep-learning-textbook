@@ -37,7 +37,7 @@
           <li><b>画像認識に興味</b>：第1〜4章</li>
           <li><b>ChatGPT のしくみが知りたい</b>：第5章 → 第9〜13章</li>
         </ul>
-        <p style="margin-top:12px"><a href="glossary.html" class="btn btn-outline btn-small">📖 用語集を見る</a></p>
+        <p style="margin-top:12px"><a href="glossary.html" class="btn btn-outline btn-small">用語集を見る</a></p>
         <p class="muted" style="margin-top:10px">先生・研究者の方へ：操作や小テストの結果はこの端末の中だけに記録され、<a href="results.html">記録ページ</a>から書き出せます。</p>
       </section>
     </div>
@@ -94,10 +94,10 @@
           var a = DL.el("a", { href: "chapters/" + c.file, class: "ch-card" + (done[no] ? " done" : "") });
           if (done[no]) a.appendChild(DL.el("span", { class: "ch-done", text: "✓ 済" }));
           a.appendChild(DL.el("div", { class: "ch-no", text: String(no) }));
-          a.appendChild(DL.el("div", { class: "ch-title", text: C.icon + " " + c.title }));
+          a.appendChild(DL.el("div", { class: "ch-title", text: c.title }));
           a.appendChild(DL.el("div", { class: "ch-en", text: c.en }));
           a.appendChild(DL.el("p", { class: "ch-desc", text: desc[no] }));
-          a.appendChild(DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "⏱ 約 " + C.minutes + " 分" })]));
+          a.appendChild(DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "約 " + C.minutes + " 分" })]));
           grid.appendChild(a);
         });
         root.appendChild(grid);

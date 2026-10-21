@@ -195,20 +195,26 @@
       cells[i * N + j].style.outline = inWin ? "3px solid #f59e0b" : "none";
     }
   }
+  var animTimer = null;
+  function stopAnim() {
+    if (animTimer) clearInterval(animTimer); animTimer = null; animPos = null; highlightInput(null); drawMat($("fm"), FM);
+    var btn = $("btn-anim"); btn.classList.remove("running"); btn.textContent = "フィルタが滑る様子を再生";
+  }
   $("btn-anim").addEventListener("click", function () {
     var btn = this;
-    if (btn.classList.contains("running")) { btn.classList.remove("running"); return; }
+    if (animTimer) { stopAnim(); DL.log(3, "animate_stop", {}); return; }
     btn.classList.add("running"); btn.textContent = "停止";
     var s = parseInt($("stride").value, 10), i = 0, j = 0, rows = FM.length, cols = FM[0].length;
-    var t = setInterval(function () {
+    animTimer = setInterval(function () {
       animPos = [i, j]; highlightInput(animPos, s); drawMat($("fm"), FM, animPos);
       j++; if (j >= cols) { j = 0; i++; }
       if (i >= rows) {
-        if ($("loop").checked && btn.classList.contains("running")) { i = 0; j = 0; return; }
-        clearInterval(t); animPos = null; highlightInput(null); drawMat($("fm"), FM); btn.disabled = false; btn.classList.remove("running"); btn.textContent = "フィルタが滑る様子を再生"; DL.log(3, "animate", { stride: s });
+        if ($("loop").checked) { i = 0; j = 0; return; }
+        stopAnim(); DL.log(3, "animate", { stride: s });
       }
     }, 180);
   });
+  ["preset", "kernel", "stride", "relu"].forEach(function (id) { $(id).addEventListener("change", function () { if (animTimer) stopAnim(); }); });
   $("preset").addEventListener("change", function () { setPreset(this.value); compute(); });
   $("kernel").addEventListener("change", function () { K = KERNELS[this.value].k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS[this.value].d; renderKer(); compute(); DL.log(3, "kernel", { kernel: this.value }); });
   $("relu").addEventListener("change", compute); $("stride").addEventListener("change", compute);
