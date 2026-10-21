@@ -105,7 +105,6 @@ var DL = (function () {
     var C = (typeof DL_CONTENT !== "undefined") ? DL_CONTENT[no] : null;
     var main = document.querySelector("main");
     if (C && main) {
-      var mm = Math.floor(C.time / 60), ss = C.time % 60;
       var hero = el("section", { class: "chapter-hero" }, [
         el("div", { class: "hero-num", text: String(no) }),
         el("div", { class: "hero-text" }, [
@@ -113,8 +112,7 @@ var DL = (function () {
           el("p", { class: "hero-tagline", text: C.icon + " " + C.tagline })
         ]),
         el("div", { class: "hero-meta" }, [
-          el("span", { class: "chip", text: "⏱ 約 " + C.minutes + " 分" }),
-          el("a", { class: "chip chip-link", href: "https://youtu.be/wbc-oxFFV9c?t=" + C.time, target: "_blank", rel: "noopener", text: "▶ 動画 " + mm + ":" + (ss < 10 ? "0" : "") + ss + " から" })
+          el("span", { class: "chip", text: "⏱ 約 " + C.minutes + " 分" })
         ])
       ]);
       main.insertBefore(hero, main.firstChild);

@@ -218,3 +218,5 @@ select.code-input { padding: 0 2px; }
 /* 広い画面では図を列いっぱいに広げる */
 .canvas-row canvas { width: 100%; }
 @media (min-width: 900px) { main > .card > canvas { width: 100%; } }
+.site-footer .ref { font-size: 0.75rem; color: #9ca3af; max-width: 720px; margin: 6px auto 0; }
+.site-footer .ref a { color: #9ca3af; }

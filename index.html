@@ -24,7 +24,6 @@
         <ul>
           <li>インストール不要。パソコンでもスマートフォンでも、このページを開くだけで動きます。</li>
           <li>各章は「<b>ねらい</b> → <b>やってみる</b>（アニメーション・実験） → <b>コードで動かす</b> → <b>ふりかえり</b> → <b>小テスト</b>」。</li>
-          <li>動画 <a href="https://youtu.be/wbc-oxFFV9c" target="_blank" rel="noopener">「Give Me 1 Hour, I'll Make Deep Learning Click Forever」</a>（Zachary Huang 氏・英語）の流れに沿っています。各章の上に、動画の該当時間へのリンクがあります。</li>
         </ul>
       </section>
       <section class="card">
@@ -57,6 +56,7 @@
 
   <footer class="site-footer">
     <p>動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究</p>
+    <p class="ref">参考：Zachary Huang, "Give Me 1 Hour, I'll Make Deep Learning Click Forever"（<a href="https://youtu.be/wbc-oxFFV9c" target="_blank" rel="noopener">YouTube</a>）。本教材の構成はこの動画を参考にしていますが、文章・図・コードはすべて独自に作成したものです。</p>
   </footer>
 
   <script src="assets/js/content.js"></script>
@@ -96,7 +96,7 @@
           a.appendChild(DL.el("div", { class: "ch-title", text: C.icon + " " + c.title }));
           a.appendChild(DL.el("div", { class: "ch-en", text: c.en }));
           a.appendChild(DL.el("p", { class: "ch-desc", text: desc[no] }));
-          a.appendChild(DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "⏱ 約 " + C.minutes + " 分" }), DL.el("span", { text: "▶ 動画 " + Math.floor(C.time / 60) + ":" + (C.time % 60 < 10 ? "0" : "") + (C.time % 60) })]));
+          a.appendChild(DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "⏱ 約 " + C.minutes + " 分" })]));
           grid.appendChild(a);
         });
         root.appendChild(grid);
