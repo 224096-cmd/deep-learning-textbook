@@ -158,7 +158,7 @@
     P.forEach(function (p, i) {
       var x = cv.width / 2 + p[0] / mx * (cv.width / 2 - 24), y = cv.height / 2 - p[1] / mx * (cv.height / 2 - 24);
       ctx.fillStyle = vocab[i] === q ? "#dc2626" : "#2563eb"; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
-      ctx.fillStyle = "#1f2430"; ctx.fillText(vocab[i], x, y - 8);
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.strokeText(vocab[i], x, y - 8); ctx.fillStyle = "#1f2430"; ctx.fillText(vocab[i], x, y - 8);
     });
     // 類似度表
     var tb = $("simtbl"); tb.innerHTML = "<tr><th>単語</th><th>コサイン類似度</th></tr>";

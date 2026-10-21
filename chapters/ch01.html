@@ -30,20 +30,6 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
 </section>
 
 <section class="card">
-  <h2>まず：ニューロン 1 個の中で何が起きているか</h2>
-  <div class="canvas-row">
-    <div>
-      <canvas id="neuron" width="520" height="220"></canvas>
-      <p class="canvas-caption">左の 2 つの入力（x1, x2）に重みを掛けて足し、しきい値と比べて 0 か 1 を出す。青い光＝計算の流れ（順伝播）、赤い光＝間違えたときに重みを直す流れ。</p>
-    </div>
-    <div>
-      <p>体験①で「1 サンプル学習」を押すたびに、この図にも光が流れます。ノードの色＝そのときの値（青＝正、赤＝負）。</p>
-      <button class="btn btn-small" id="btn-neuron">光の流れをもう一度見る</button>
-    </div>
-  </div>
-</section>
-
-<section class="card">
   <h2>体験①：学習の様子を見る</h2>
   <div class="controls">
     <label>問題：
@@ -83,9 +69,9 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
 <section class="card">
   <h2>体験②：手で重みを動かす</h2>
   <div class="controls">
-    <label>w1 <input type="range" id="mw1" min="-3" max="3" step="0.05" value="1"></label>
-    <label>w2 <input type="range" id="mw2" min="-3" max="3" step="0.05" value="1"></label>
-    <label>b <input type="range" id="mb" min="-3" max="3" step="0.05" value="-0.5"></label>
+    <label>w1 <input type="range" id="mw1" min="-3" max="3" step="0.05" value="1"> <span class="val" id="mw1v">1.00</span></label>
+    <label>w2 <input type="range" id="mw2" min="-3" max="3" step="0.05" value="1"> <span class="val" id="mw2v">1.00</span></label>
+    <label>b <input type="range" id="mb" min="-3" max="3" step="0.05" value="-0.5"> <span class="val" id="mbv">-0.50</span></label>
     <span class="status" id="manual-status"></span>
   </div>
   <p class="muted">スライダーを動かすと体験①の直線が直接動きます。学習とは「このスライダーをデータに合わせて自動で調整すること」です。</p>
@@ -157,8 +143,7 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
     for (var i = 0; i < n; i++) learnOne();
   }
 
-  var anim = DL.netAnim($("neuron"), { layers: [2, 1], labels: ["入力 x1, x2", "出力 y"], speed: 1.6 });
-  $("btn-neuron").addEventListener("click", function () { anim.pulse("both"); });
+  var anim = { setActs: function () {}, pulse: function () {}, start: function () {}, stop: function () {} };
   var cv = $("plane"), ctx = cv.getContext("2d");
   function toPx(x) { return (x + 1) / 2 * cv.width; }
   function toPy(y) { return (1 - (y + 1) / 2) * cv.height; }
@@ -201,7 +186,7 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
     $("ep").textContent = epoch; $("accv").textContent = (accuracy() * 100).toFixed(1) + "%";
     DL.lineChart($("acc"), [{ name: "正答率", values: accHist }], { yMin: 0, yMax: 1, xLabel: "エポック", yLabel: "正答率" });
   }
-  function syncSliders() { $("mw1").value = w[0]; $("mw2").value = w[1]; $("mb").value = b; }
+  function syncSliders() { $("mw1").value = w[0]; $("mw2").value = w[1]; $("mb").value = b; $("mw1v").textContent = w[0].toFixed(2); $("mw2v").textContent = w[1].toFixed(2); $("mbv").textContent = b.toFixed(2); }
 
   cv.addEventListener("click", function (e) {
     var r = cv.getBoundingClientRect();
@@ -225,6 +210,7 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
   ["mw1", "mw2", "mb"].forEach(function (id) {
     $(id).addEventListener("input", function () {
       w[0] = parseFloat($("mw1").value); w[1] = parseFloat($("mw2").value); b = parseFloat($("mb").value);
+      $("mw1v").textContent = w[0].toFixed(2); $("mw2v").textContent = w[1].toFixed(2); $("mbv").textContent = b.toFixed(2);
       $("manual-status").textContent = "正答率 " + (accuracy() * 100).toFixed(1) + "%";
       draw();
     });

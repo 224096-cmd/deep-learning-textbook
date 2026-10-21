@@ -174,7 +174,7 @@ var DL = (function () {
       if (quizCard) main.insertBefore(wrap, quizCard); else main.appendChild(wrap);
       // セクション見出しにタグを付ける
       Array.prototype.forEach.call(main.querySelectorAll(".card > h2"), function (h) {
-        var t = h.textContent, tag = /^体験|^まず/.test(t) ? "やってみる" : /^コード/.test(t) ? "コード" : /^小テスト/.test(t) ? "テスト" : /^ふりかえり/.test(t) ? "まとめ" : /^この章/.test(t) ? "ねらい" : /^記録/.test(t) ? "記録" : null;
+        var t = h.textContent, tag = /^体験|^まず/.test(t) ? "やってみる" : /^しくみ/.test(t) ? "しくみ" : /^コード/.test(t) ? "コード" : /^小テスト/.test(t) ? "テスト" : /^ふりかえり/.test(t) ? "まとめ" : /^この章/.test(t) ? "ねらい" : /^記録/.test(t) ? "記録" : null;
         if (tag) h.insertBefore(el("span", { class: "sec-tag tag-" + tag, text: tag }), h.firstChild);
       });
     }
@@ -359,7 +359,8 @@ var DL = (function () {
     });
     if (opts.yMin !== undefined) yMin = opts.yMin;
     if (opts.yMax !== undefined) yMax = opts.yMax;
-    if (!isFinite(yMin)) { yMin = 0; yMax = 1; }
+    var empty = !isFinite(yMin);
+    if (empty) { yMin = 0; yMax = 1; }
     if (yMax === yMin) yMax = yMin + 1;
     var ty = function (v) { return opts.logY ? Math.log10(Math.max(v, 1e-12)) : v; };
     var lo = ty(yMin), hi = ty(yMax);
@@ -378,6 +379,7 @@ var DL = (function () {
     ctx.textAlign = "center";
     ctx.fillText(opts.xLabel || "", (L + W - R) / 2, H - 6);
     ctx.save(); ctx.translate(12, (T + H - B) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(opts.yLabel || "", 0, 0); ctx.restore();
+    if (empty) { ctx.fillStyle = "#94a3b8"; ctx.font = "13px sans-serif"; ctx.textAlign = "center"; ctx.fillText(opts.emptyText || "ボタンを押すと、ここにグラフが表示されます", (L + W - R) / 2, (T + H - B) / 2); }
     // 系列
     series.forEach(function (s, si) {
       ctx.strokeStyle = s.color || ["#2563eb", "#dc2626", "#16a34a", "#d97706", "#7c3aed"][si % 5];
@@ -444,6 +446,7 @@ var DL = (function () {
     opts = opts || {};
     var ctx = clearCanvas(cv), W = cv.width, H = cv.height;
     var L = opts.left || 90, R = 50;
+    if (!items.length) { ctx.fillStyle = "#94a3b8"; ctx.font = "13px sans-serif"; ctx.textAlign = "center"; ctx.fillText(opts.emptyText || "まだデータがありません", W / 2, H / 2); return; }
     var vmax = opts.vmax || Math.max.apply(null, items.map(function (i) { return i.value; })) || 1;
     var bh = (H - 10) / items.length;
     ctx.font = "12px sans-serif";
@@ -719,7 +722,7 @@ var DL = (function () {
   }
 
   return {
-    netAnim: netAnim, codePanel: codePanel, legend: legend, arch: arch,
+    netAnim: netAnim, codePanel: codePanel, legend: legend, arch: arch, polishUI: polishUI,
     CHAPTERS: CHAPTERS, $: $, el: el, RNG: RNG, softmax: softmax, sigmoid: sigmoid, tanh: tanh, relu: relu, dot: dot, fmt: fmt,
     nav: nav, log: log, loadLog: loadLog, clearLog: clearLog,
     download: download, toCSV: toCSV, toMarkdownTable: toMarkdownTable, exportButtons: exportButtons, stamp: stamp,

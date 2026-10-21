@@ -29,12 +29,6 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
 </section>
 
 <section class="card">
-  <h2>まず：RNN を時間方向に「展開」すると</h2>
-  <canvas id="unroll" width="860" height="200"></canvas>
-  <p class="canvas-caption">左から右へ時刻が進む。同じ重み（同じ色のノード）を使い回しながら、隠れ状態 h が次の時刻へ渡される。青い光＝順伝播、赤い光＝BPTT（時間をさかのぼる逆伝播）。</p>
-</section>
-
-<section class="card">
   <h2>体験①：隠れ状態が時間とともにどう変わるか</h2>
   <p>課題：「<b>最初のビット</b>（0 か 1）を、その後の雑音ビットが続いた<b>最後まで覚えておき</b>、最後に答える」。
   下のビット列をクリックして変え、学習済み RNN の隠れ状態がどう変化するかを見ます。</p>
@@ -91,7 +85,6 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
   var rng = new DL.RNG(66);
   var T1 = 10, bits = [1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0], model = new SEQ.Model("rnn", 6, new DL.RNG(2)), trained = false;
   var gradRecords = [];
-  DL.netAnim($("unroll"), { layers: [1, 3, 3, 3, 3, 3, 1], labels: ["x_0", "h_0", "h_1", "h_2", "h_3", "h_4", "出力"], speed: 1.1, recurrent: false }).start();
   var showT = null;
 
   function renderBits() {

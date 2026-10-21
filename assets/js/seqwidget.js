@@ -78,6 +78,9 @@
       stop.onclick = finish;
     }
     btn.addEventListener("click", run);
+    DL.lineChart(lossCv, [{ name: "", values: [] }], { emptyText: "「学習スタート」で損失の推移が表示されます" });
+    DL.lineChart(accCv, [{ name: "", values: [] }], { emptyText: "「学習スタート」で正答率の推移が表示されます" });
+    if (DL.polishUI) DL.polishUI(c);
   };
 
   // 時間方向の勾配の流れ比較グラフ

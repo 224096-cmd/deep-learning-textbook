@@ -58,7 +58,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
     <label>位置の数 <input type="range" id="npos" min="8" max="64" step="8" value="32"> <span class="val" id="nposv">32</span></label>
     <label>次元 d <input type="range" id="dmodel" min="8" max="64" step="8" value="32"> <span class="val" id="dmodelv">32</span></label>
   </div>
-  <canvas id="pecv" width="860" height="260"></canvas>
+  <canvas id="pecv" width="860" height="220"></canvas>
   <p class="canvas-caption">行＝位置、列＝次元。左の次元は速い波、右は遅い波。各行（位置）のパターンがすべて違うので、「何番目か」を区別できる。</p>
 </section>
 
@@ -136,6 +136,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
       rec["head" + (h + 1) + "_row1"] = A[0].map(function (v) { return v.toFixed(2); }).join(" ");
     }
     records.push(rec); if (records.length > 200) records.shift();
+    if (DL.polishUI) DL.polishUI(row);
   }
   ["sent", "heads", "pe", "causal"].forEach(function (id) { $(id).addEventListener("change", compute); });
   $("sent").addEventListener("input", compute);

@@ -32,7 +32,7 @@
   <textarea id="corpus" style="min-height:140px"></textarea>
   <div class="controls">
     <label>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2">2 文字</option><option value="3" selected>3 文字</option><option value="4">4 文字</option></select></label>
-    <button class="btn btn-small" id="btn-train">学習する（数える）</button>
+    <button class="btn btn-small" id="btn-train">文章を書き換えたら再学習</button>
     <span class="status" id="st"></span>
   </div>
   <div class="controls">
@@ -124,16 +124,19 @@
   function drawDist(dist) {
     DL.barChart($("dist"), dist.slice(0, 8).map(function (o) { return { label: "「" + o.c + "」", value: o.p, color: "#2563eb" }; }), { vmax: Math.max(0.05, dist[0].p), left: 50, format: function (v) { return (v * 100).toFixed(1) + "%"; } });
   }
-  $("btn-train").addEventListener("click", function () {
+  function trainNow() {
     var text = $("corpus").value.replace(/\s+/g, ""), n = +$("order").value;
     model = train(text, n);
     $("st").textContent = "学習完了：" + text.length + " 文字、異なり文字 " + model.vocab.length + "、文脈パターン " + Object.keys(model.counts).length + " 種類";
     drawDist(probs(model, $("prompt").value, +$("temp").value));
     DL.log(13, "train", { chars: text.length, order: n });
-  });
+  }
+  $("btn-train").addEventListener("click", trainNow);
+  $("order").addEventListener("change", trainNow);
+  trainNow();
   $("temp").addEventListener("input", function () { $("tempv").textContent = (+this.value).toFixed(1); if (model) drawDist(probs(model, $("out").textContent || $("prompt").value, +this.value)); });
   $("btn-gen").addEventListener("click", function () {
-    if (!model) { alert("先に「学習する」を押してください。"); return; }
+    if (!model) trainNow();
     var btn = this, text = $("prompt").value, L = +$("len").value, temp = +$("temp").value, mode = $("mode").value, k = 0; btn.disabled = true;
     $("out").textContent = text;
     var t = setInterval(function () {

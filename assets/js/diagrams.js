@@ -40,7 +40,7 @@ var DL_DIAGRAMS = {
       { id: "p2", x: 575, y: 95, w: 100, h: 70, color: "amber", label: "MaxPool", sub: "2×2 → 5×5×16", desc: "さらに半分に。ここまでで「どこに何の部品があるか」の要約ができる。" },
       { id: "fc", x: 705, y: 80, w: 100, h: 100, color: "violet", label: "平らに並べる\n→ 全結合", sub: "400 → 64", desc: "5×5×16 = 400 個の数を 1 列に並べ、第2章の MLP に入れる。特徴の組み合わせから答えを決める部分。" },
       { id: "out", x: 830, y: 95, w: 60, h: 70, color: "green", label: "10\nクラス", desc: "softmax で「0〜9 のどれか」の確率を出す。" },
-      { id: "note", x: 145, y: 225, w: 630, h: 50, color: "gray", label: "重みがあるのは「畳み込み」と「全結合」だけ。畳み込みのフィルタは全位置で共有されるので、画像が大きくても重みは増えない。", desc: "28×28 を MLP に直接入れると 1 層目だけで数十万個の重みが必要だが、3×3×8 の畳み込みなら 80 個。これが CNN が画像で強い理由の 1 つ。" }
+      { id: "note", x: 60, y: 218, w: 780, h: 62, color: "gray", label: "学習で変わる重みがあるのは「畳み込み」と「全結合」だけ。\nフィルタは全位置で共有されるので、画像が大きくても畳み込みの重みは増えない。", desc: "28×28 を MLP に直接入れると 1 層目だけで数十万個の重みが必要だが、3×3×8 の畳み込みなら 80 個。これが CNN が画像で強い理由の 1 つ。" }
     ],
     edges: [ { from: "img", to: "c1", color: "blue" }, { from: "c1", to: "p1", color: "amber" }, { from: "p1", to: "c2", color: "blue" }, { from: "c2", to: "p2", color: "amber" }, { from: "p2", to: "fc", color: "violet" }, { from: "fc", to: "out", color: "green" } ] },
   4: { w: 900, h: 260, intro: "残差ブロック（He らの図の構成）。左：普通の 2 層。右：同じ 2 層に「近道」を足したもの。",
@@ -69,7 +69,7 @@ var DL_DIAGRAMS = {
       { id: "w5", x: 340, y: 40, w: 70, h: 44, color: "gray", label: "住む", desc: "文脈の単語（窓の幅 2 なら、中心から 2 語まで）。" },
       { id: "E", x: 110, y: 150, w: 210, h: 80, color: "blue", label: "埋め込み表 E", sub: "語彙数 × d 個の数（学習で変わる）", desc: "1 行＝1 単語。one-hot の番号で行を選ぶだけなので「表引き」と同じ。この表の中身を学習で動かす。" },
       { id: "v", x: 380, y: 160, w: 110, h: 60, color: "amber", label: "城のベクトル", sub: "d 個の数", desc: "中心単語の行を取り出したもの。これが埋め込みベクトル。" },
-      { id: "pred", x: 540, y: 150, w: 170, h: 80, color: "violet", label: "周りの単語を予測", sub: "「王」「は」「に」「住む」が出やすいか", desc: "ベクトルと各単語の「文脈ベクトル」の内積 → シグモイド。正しい周辺語は確率を上げ、無関係な語（負例）は下げるように E を更新する。" },
+      { id: "pred", x: 540, y: 150, w: 170, h: 80, color: "violet", label: "周りの単語を予測", sub: "王・は・に・住む が出やすいか", desc: "ベクトルと各単語の「文脈ベクトル」の内積 → シグモイド。正しい周辺語は確率を上げ、無関係な語（負例）は下げるように E を更新する。" },
       { id: "res", x: 750, y: 150, w: 140, h: 80, color: "green", label: "似た文脈の単語が\n近づく", desc: "「王」と「女王」は同じような周辺語（城・治める）を持つので、予測がうまくいくようにするとベクトルが似てくる。" }
     ],
     edges: [ { from: "w3", to: "E", color: "amber", label: "行を選ぶ" }, { from: "E", to: "v", color: "blue" }, { from: "v", to: "pred", color: "amber" }, { from: "pred", to: "res", color: "violet" },
@@ -135,7 +135,7 @@ var DL_DIAGRAMS = {
     edges: [ { from: "s1", to: "e1", color: "gray" }, { from: "s2", to: "e2", color: "gray" }, { from: "s3", to: "e3", color: "gray" }, { from: "e1", to: "e2", color: "blue" }, { from: "e2", to: "e3", color: "blue" }, { from: "e3", to: "ctx", color: "blue", width: 3 }, { from: "ctx", to: "d1", color: "amber", width: 3 },
       { from: "d1", to: "d2", color: "green" }, { from: "d2", to: "d3", color: "green" }, { from: "d3", to: "d4", color: "green" }, { from: "b0", to: "d1", color: "gray" },
       { from: "d1", to: "o1", color: "violet" }, { from: "d2", to: "o2", color: "violet" }, { from: "d3", to: "o3", color: "violet" }, { from: "d4", to: "o4", color: "violet" },
-      { from: "o1", to: "d2", color: "violet", dashed: true, bend: -20 }, { from: "o2", to: "d3", color: "violet", dashed: true, bend: -20 }, { from: "o3", to: "d4", color: "violet", dashed: true, bend: -20, label: "出した語を次の入力へ" } ] },
+      { from: "o1", to: "d2", color: "violet", dashed: true, bend: -20 }, { from: "o2", to: "d3", color: "violet", dashed: true, bend: -20 }, { from: "o3", to: "d4", color: "violet", dashed: true, bend: -20, label: "出した語を次の入力へ", labelAt: [640, 78] } ] },
   10: { w: 900, h: 290, intro: "Attention つき Seq2Seq（Bahdanau らの構成）。デコーダは毎回、エンコーダの全状態を重み付きで見直す。",
     nodes: [
       { id: "h1", x: 20, y: 200, w: 70, h: 50, color: "blue", label: "h₁", sub: "The", desc: "エンコーダの各時刻の状態。Seq2Seq では最後の 1 つしか使わなかったが、Attention では全部を残しておく（Key と Value）。" }, { id: "h2", x: 110, y: 200, w: 70, h: 50, color: "blue", label: "h₂", sub: "cat", desc: "" }, { id: "h3", x: 200, y: 200, w: 70, h: 50, color: "blue", label: "h₃", sub: "sat", desc: "" }, { id: "h4", x: 290, y: 200, w: 70, h: 50, color: "blue", label: "h₄", sub: "down", desc: "" },
@@ -178,5 +178,5 @@ var DL_DIAGRAMS = {
       { id: "pick", x: 700, y: 110, w: 100, h: 50, color: "green", label: "1 語選ぶ", sub: "最大 or くじ引き", desc: "貪欲法なら最大確率、サンプリングなら確率に従って選ぶ。" },
       { id: "app", x: 700, y: 210, w: 180, h: 44, color: "amber", label: "末尾に足して繰り返す", desc: "選んだ単語を入力列の末尾に追加し、また「次は？」を聞く。<EOS> が出るか上限まで続ける。これが ChatGPT が 1 語ずつ文字を出す理由。" }
     ],
-    edges: [ { from: "t1", to: "gpt", color: "gray" }, { from: "t2", to: "gpt", color: "gray" }, { from: "t3", to: "gpt", color: "gray" }, { from: "t4", to: "gpt", color: "gray" }, { from: "gpt", to: "dist", color: "blue", width: 3 }, { from: "dist", to: "pick", color: "violet" }, { from: "pick", to: "app", color: "green" }, { from: "app", to: "t5", color: "amber", label: "「良い」", width: 3 } ] }
+    edges: [ { from: "t1", to: "gpt", color: "gray" }, { from: "t2", to: "gpt", color: "gray" }, { from: "t3", to: "gpt", color: "gray" }, { from: "t4", to: "gpt", color: "gray" }, { from: "gpt", to: "dist", color: "blue", width: 3 }, { from: "dist", to: "pick", color: "violet" }, { from: "pick", to: "app", color: "green" }, { from: "app", to: "t5", color: "amber", label: "選んだ語「良い」を追加", width: 3, labelAt: [560, 222] } ] }
 };
