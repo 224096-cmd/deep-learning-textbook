@@ -45,7 +45,7 @@ h_t = o * tanh(c_t)</div>
   <div class="table-wrap scroll"><table class="data" id="celltbl"><tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr></table></div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：勾配の流れを RNN と比べる</h2>
   <div class="controls">
     <label>系列の長さ T <input type="range" id="gT" min="5" max="60" step="5" value="30"> <span class="val" id="gTv">30</span></label>
@@ -62,7 +62,7 @@ h_t = o * tanh(c_t)</div>
   <div class="note"><b>試してみよう</b>：T=30 で LSTM は数百ステップで解けますが、RNN は 1000 ステップ以上かかるか解けないことが多いです。最適化を「SGD（素朴）」にすると、勾配消失の影響がより露骨に出ます。</div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験④：学習済み LSTM のゲートを見る</h2>
   <div class="controls">
     <button class="btn btn-small" id="btn-pre">LSTM を学習して可視化（T=15）</button>

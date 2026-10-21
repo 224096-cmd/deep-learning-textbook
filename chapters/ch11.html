@@ -36,10 +36,10 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   <div class="controls">
     <label>文（スペース区切り）<input type="text" id="sent" value="猫 が 魚 を 食べた" size="30"></label>
     <label>ヘッド数 <select id="heads"><option>1</option><option selected>2</option><option>4</option></select></label>
-    <label><input type="checkbox" id="pe" checked> 位置エンコーディングを足す</label>
-    <label><input type="checkbox" id="causal"> 未来を見ない（因果マスク：GPT 型）</label>
-    <button class="btn btn-small" id="btn-shuffle">単語順を入れ替える</button>
-    <button class="btn btn-small" id="btn-reseed">重みの乱数を変える</button>
+    <label data-adv><input type="checkbox" id="pe" checked> 位置エンコーディングを足す</label>
+    <label data-adv><input type="checkbox" id="causal"> 未来を見ない（因果マスク：GPT 型）</label>
+    <button class="btn btn-small" id="btn-shuffle" data-adv>単語順を入れ替える</button>
+    <button class="btn btn-small" id="btn-reseed" data-adv>重みの乱数を変える</button>
     <button class="btn btn-small" id="btn-reset11">元に戻す</button>
   </div>
   <canvas id="arcs" width="860" height="230"></canvas>
@@ -53,7 +53,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   </div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：位置エンコーディング（sin・cos の波）</h2>
   <div class="controls">
     <label>位置の数 <input type="range" id="npos" min="8" max="64" step="8" value="32"> <span class="val" id="nposv">32</span></label>
@@ -63,7 +63,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   <p class="canvas-caption">行＝位置、列＝次元。左の次元は速い波、右は遅い波。各行（位置）のパターンがすべて違うので、「何番目か」を区別できる。</p>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験③：RNN と Transformer の計算の違い</h2>
   <div class="controls">
     <label>文の長さ n <input type="range" id="nlen" min="4" max="512" step="4" value="64"> <span class="val" id="nlenv">64</span></label>

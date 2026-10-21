@@ -28,12 +28,13 @@
 <section class="card">
   <h2>体験①：穴埋めをやってみる（左だけ見る vs 両側を見る）</h2>
   <p>本物の BERT は巨大ですが、ここでは「文章集の中で、前後にどんな単語が来やすいか」を数えるだけの小さなモデルで、<b>両側を見ることの効果</b>を体験します。文章集は書き換えても構いません。</p>
+  <details class="adv-settings"><summary>文章集を見る・書き換える</summary>
   <textarea id="corpus"></textarea>
   <div class="controls">
     <button class="btn btn-small" id="btn-build">文章集を読み込む</button>
     <button class="btn btn-small" id="btn-corpus12">文章集を元に戻す</button>
     <span class="status" id="st"></span>
-  </div>
+  </div></details>
   <p>下の文の単語をクリックして [MASK] にすると、2 通りの方法で予測します。</p>
   <div class="controls">
     <label>文：<select id="pick"></select></label>

@@ -127,7 +127,7 @@ var DL = (function () {
 
     var footer = el("footer", { class: "site-footer" }, [
       el("div", { class: "nav-row" }, [
-        no > 1 ? el("a", { href: CHAPTERS[no - 2].file, class: "btn btn-outline", text: "← 第" + (no - 1) + "章 " + CHAPTERS[no - 2].title }) : el("span"),
+        no > 1 ? el("a", { href: CHAPTERS[no - 2].file, class: "btn btn-outline", text: "← 第" + (no - 1) + "章 " + CHAPTERS[no - 2].title }) : el("a", { href: "../intro.html", class: "btn btn-outline", text: "← はじめに：基礎知識" }),
         no < CHAPTERS.length ? el("a", { href: CHAPTERS[no].file, class: "btn", text: "第" + (no + 1) + "章 " + CHAPTERS[no].title + " →" }) : el("a", { href: "../results.html", class: "btn", text: "記録を書き出す →" })
       ]),
       el("p", { class: "muted", text: "動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究" })
@@ -187,9 +187,26 @@ var DL = (function () {
      ・canvas + キャプション → 枠付きの図
      ・.status → バッジ */
   function polishUI(root) {
+    // 発展セクション：折りたたむ
+    Array.prototype.forEach.call(root.querySelectorAll("section.adv-section"), function (sec) {
+      if (sec.parentNode.tagName === "DETAILS") return;
+      var h = sec.querySelector("h2"), title = h ? h.textContent.replace(/^体験[①-⑨]?[：:]\s*/, "") : "発展";
+      var det = el("details", { class: "adv-block" }, [el("summary", {}, [el("span", { class: "sec-tag tag-発展", text: "発展" }), el("span", { text: title }), el("span", { class: "adv-hint", text: "（開くと試せます）" })])]);
+      sec.parentNode.insertBefore(det, sec); det.appendChild(sec);
+      if (h) h.style.display = "none";
+    });
     Array.prototype.forEach.call(root.querySelectorAll(".controls"), function (ctl) {
       if (ctl.classList.contains("toolbar")) return;
       ctl.classList.add("toolbar");
+      // 細かい設定（data-adv）を別パネルへ
+      var adv = ctl.querySelectorAll("[data-adv]");
+      if (adv.length) {
+        var det = el("details", { class: "adv-settings" }, [el("summary", { text: "細かい設定" })]);
+        var inner = el("div", { class: "controls toolbar adv-inner" });
+        Array.prototype.forEach.call(adv, function (x) { inner.appendChild(x); });
+        det.appendChild(inner); ctl.parentNode.insertBefore(det, ctl.nextSibling);
+        polishUI(inner.parentNode);
+      }
       Array.prototype.forEach.call(ctl.querySelectorAll("label"), function (lab) {
         var input = lab.querySelector("input, select"); if (!input) return;
         var isCheck = input.type === "checkbox";

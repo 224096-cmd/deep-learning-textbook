@@ -288,3 +288,18 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 .refs ul { margin: 0; padding-left: 18px; }
 .refs li { margin: 2px 0; }
 .gen-out:empty::before { content: "ここに生成した文章が 1 文字ずつ表示されます"; color: #94a3b8; }
+
+/* ---------- 必要な操作と細かい設定の分離 ---------- */
+details.adv-settings { margin: -4px 0 12px; }
+details.adv-settings > summary { cursor: pointer; font-size: 0.85rem; color: #64748b; padding: 4px 6px; list-style: none; display: inline-block; }
+details.adv-settings > summary::before { content: "▸ "; }
+details.adv-settings[open] > summary::before { content: "▾ "; }
+details.adv-settings .controls.toolbar { background: #fff; border-style: dashed; margin-top: 4px; }
+details.adv-block { margin-bottom: 20px; }
+details.adv-block > summary { cursor: pointer; list-style: none; background: #fff; border: 1px dashed #c4b5fd; border-radius: var(--radius); padding: 14px 24px; font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; color: #334155; }
+details.adv-block > summary::before { content: "▸"; color: #7c3aed; }
+details.adv-block[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none; }
+details.adv-block[open] > summary::before { content: "▾"; }
+details.adv-block > section.card { border-top-left-radius: 0; border-top-right-radius: 0; border-style: dashed; border-color: #c4b5fd; margin-top: 0; }
+.adv-hint { font-weight: 400; font-size: 0.85rem; color: #94a3b8; margin-left: auto; }
+.tag-発展 { background: var(--violet); }

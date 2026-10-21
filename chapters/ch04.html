@@ -31,16 +31,16 @@
   <h2>体験①：層ごとの勾配の大きさを見る</h2>
   <div class="controls">
     <label>層の数 <input type="range" id="depth" min="2" max="60" step="1" value="30"> <span class="val" id="depthv">30</span></label>
-    <label>各層の幅 <input type="range" id="width" min="2" max="16" step="1" value="8"> <span class="val" id="widthv">8</span></label>
-    <label>初期重みの大きさ <input type="range" id="scale" min="0.3" max="2.0" step="0.1" value="1.0"> <span class="val" id="scalev">1.0</span></label>
-    <button class="btn btn-small" id="btn-grad">再計算（乱数を変える）</button>
+    <label data-adv>各層の幅 <input type="range" id="width" min="2" max="16" step="1" value="8"> <span class="val" id="widthv">8</span></label>
+    <label data-adv>初期重みの大きさ <input type="range" id="scale" min="0.3" max="2.0" step="0.1" value="1.0"> <span class="val" id="scalev">1.0</span></label>
+    <button class="btn btn-small" id="btn-grad" data-adv>再計算（乱数を変える）</button>
   </div>
   <canvas id="gradc" width="800" height="260"></canvas>
   <p class="canvas-caption">横軸＝層（左が入力側）、縦軸＝出力の誤差がその層まで戻ってきたときの勾配の大きさ（対数軸、8 個のネットの平均）。赤＝普通の深いネット、青＝残差接続つき。</p>
   <p class="status" id="gradtxt"></p>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：実際に学習して比べる（関数の当てはめ）</h2>
   <div class="controls">
     <label>層の数 <input type="range" id="tdepth" min="2" max="40" step="1" value="20"> <span class="val" id="tdepthv">20</span></label>

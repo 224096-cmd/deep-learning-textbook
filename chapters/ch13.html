@@ -28,20 +28,17 @@
 
 <section class="card">
   <h2>体験①：次の文字を予測して文章を生成する</h2>
-  <p>学習用の文章（自由に書き換え・追加できます。長いほど良くなります）</p>
-  <textarea id="corpus" style="min-height:140px"></textarea>
-  <div class="controls">
-    <label>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2">2 文字</option><option value="3" selected>3 文字</option><option value="4">4 文字</option></select></label>
-    <button class="btn btn-small" id="btn-train">文章を書き換えたら再学習</button>
-    <button class="btn btn-small" id="btn-corpus13">文章を元に戻す</button>
-    <span class="status" id="st"></span>
-  </div>
+  <details class="adv-settings"><summary>学習用の文章を見る・書き換える（長いほど良くなります）</summary><textarea id="corpus" style="min-height:140px"></textarea></details>
   <div class="controls">
     <label>書き出し <input type="text" id="prompt" value="深層学習は" size="16"></label>
     <label>温度 <input type="range" id="temp" min="0.1" max="2" step="0.1" value="1"> <span class="val" id="tempv">1.0</span></label>
-    <label>方式 <select id="mode"><option value="sample">サンプリング</option><option value="greedy">貪欲法（常に 1 位）</option><option value="topk">top-k（k=3）</option></select></label>
-    <label>文字数 <input type="number" id="len" value="60" min="10" max="300" style="width:70px"></label>
+    <label data-adv>方式 <select id="mode"><option value="sample">サンプリング</option><option value="greedy">貪欲法（常に 1 位）</option><option value="topk">top-k（k=3）</option></select></label>
+    <label data-adv>文字数 <input type="number" id="len" value="60" min="10" max="300" style="width:70px"></label>
     <button class="btn btn-small" id="btn-gen">1 文字ずつ生成</button>
+    <span class="status" id="st"></span>
+    <label data-adv>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2">2 文字</option><option value="3" selected>3 文字</option><option value="4">4 文字</option></select></label>
+    <button class="btn btn-small" id="btn-train" data-adv>文章を書き換えたら再学習</button>
+    <button class="btn btn-small" id="btn-corpus13" data-adv>文章を元に戻す</button>
   </div>
   <div class="gen-out" id="out"></div>
   <div class="canvas-row">
@@ -53,7 +50,7 @@
   <div class="note"><b>試してみよう</b>：①温度 0.1 と 2.0 で生成を比べる。②貪欲法で同じ書き出しを 2 回生成すると、必ず同じ文になることを確認。③n−1 を 1 → 4 に増やすと「それらしさ」はどう変わる？（ただし学習文からの丸写しも増える＝過学習）</div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：データ量を増やすとどれだけ上手くなるか（ミニ・スケーリング実験）</h2>
   <p>学習文の後ろ 20% を「見たことのないテスト文」として取っておき、前の方の 10%, 20%, … 80% で学習したモデルが、テスト文の次の文字をどれだけ当てられるか測ります。</p>
   <div class="controls">

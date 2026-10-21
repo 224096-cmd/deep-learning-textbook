@@ -28,13 +28,13 @@
 <section class="card">
   <h2>体験：小さな文章集から埋め込みを学習する</h2>
   <p>文は「単語 単語 単語」のようにスペース区切りで書きます。自分の文章に書き換えても構いません。</p>
-  <textarea id="corpus"></textarea>
+  <details class="adv-settings"><summary>文章集を見る・書き換える</summary><textarea id="corpus"></textarea></details>
   <div class="controls">
-    <label>次元数 d <input type="range" id="dim" min="2" max="8" step="1" value="4"> <span class="val" id="dimv">4</span></label>
-    <label>窓の幅 <input type="range" id="win" min="1" max="3" step="1" value="2"> <span class="val" id="winv">2</span></label>
-    <label>学習率 <input type="range" id="lr" min="0.01" max="0.3" step="0.01" value="0.1"> <span class="val" id="lrv">0.10</span></label>
-    <button class="btn btn-small" id="btn-init">初期化</button>
-    <button class="btn btn-small" id="btn-corpus">文章集を元に戻す</button>
+    <label data-adv>次元数 d <input type="range" id="dim" min="2" max="8" step="1" value="4"> <span class="val" id="dimv">4</span></label>
+    <label data-adv>窓の幅 <input type="range" id="win" min="1" max="3" step="1" value="2"> <span class="val" id="winv">2</span></label>
+    <label data-adv>学習率 <input type="range" id="lr" min="0.01" max="0.3" step="0.01" value="0.1"> <span class="val" id="lrv">0.10</span></label>
+    <button class="btn btn-small" id="btn-init" data-adv>初期化</button>
+    <button class="btn btn-small" id="btn-corpus" data-adv>文章集を元に戻す</button>
     <button class="btn btn-small" id="btn-train">50 エポック学習</button>
     <button class="btn btn-small" id="btn-auto">動かしながら学習（開始/停止）</button>
     <span class="status" id="st"></span>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>はじめに：ディープラーニングの基礎知識 | 動かして学ぶディープラーニング</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+<header class="site-header compact sticky">
+  <div class="nav-row"><a href="index.html" class="nav-home">← 目次</a><span class="nav-title">はじめに：ディープラーニングの基礎知識</span><a href="glossary.html" class="nav-home nav-small">用語集</a></div>
+</header>
+<main class="container wide">
+
+<section class="chapter-hero">
+  <div class="hero-num">0</div>
+  <div class="hero-text"><div class="hero-title">はじめに <span class="hero-en">Basics</span></div><p class="hero-tagline">13 章を読む前に知っておきたい、共通のことば 6 つ</p></div>
+  <div class="hero-meta"><span class="chip">約 15 分</span></div>
+</section>
+
+<section class="card">
+  <h2>ディープラーニングとは</h2>
+  <div class="goal">
+    <b>人工知能（AI）</b>の中に<b>機械学習</b>があり、その中に<b>ディープラーニング（深層学習）</b>があります。
+    機械学習＝「ルールを人が書く代わりに、データから規則を見つけさせる」こと。ディープラーニング＝その道具として<b>層を深く重ねたニューラルネットワーク</b>を使うこと。
+    この教材の 13 章は、そのネットワークの「形（アーキテクチャ）」がどう進化してきたかを順にたどります。
+  </div>
+  <div id="arch"></div>
+</section>
+
+<section class="card">
+  <h2>すべての章に共通する「学習の 3 ステップ」</h2>
+  <div class="extra-grid">
+    <div class="box box-uses"><h4>1. モデル</h4><p>入力から出力を計算する「式」。中に<b>重み</b>（調整できる数）がたくさん入っている。各章で学ぶのは、この式の形の違い。</p></div>
+    <div class="box box-analogy"><h4>2. 損失</h4><p>予測と正解の<b>ズレを 1 つの数</b>にしたもの。数値を当てる問題では<b>平均二乗誤差</b>、分類では<b>交差エントロピー</b>がよく使われる。小さいほど良い。</p></div>
+    <div class="box" style="background:#ecfdf5;border:1px solid #a7f3d0"><h4>3. 最適化</h4><p>損失が減る方向（<b>勾配</b>）に重みを少しずつ動かす。基本は<b>勾配降下法（SGD）</b>、よく使われる改良版が <b>Adam</b>。1 回動かす幅が<b>学習率</b>。</p></div>
+  </div>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
+  <ul>
+    <li><span class="term">重み（パラメータ）</span>：モデルの中の調整可能な数。学習で変わるのはこれだけ。</li>
+    <li><span class="term">損失関数</span>：ズレを数にする関数。平均二乗誤差 (y − t)²、交差エントロピー −log p など。</li>
+    <li><span class="term">勾配降下法</span>：損失の坂を下る方向へ重みを動かす方法。「確率的（SGD）」は少しのデータで勾配を見積もって頻繁に動かすやり方。</li>
+    <li><span class="term">Adam</span>：勾配の大きさや向きの履歴を使って、重みごとに歩幅を自動調整する最適化手法。多くの場面で既定として使われる。</li>
+    <li><span class="term">学習率</span>：1 回の更新で動かす幅。大きいと速いが暴れる、小さいと安定だが遅い。</li>
+    <li><span class="term">エポック／バッチ／ステップ</span>：訓練データを 1 周＝1 エポック。1 回の更新に使う小さなかたまり＝バッチ。1 回の更新＝1 ステップ。</li>
+  </ul></details>
+</section>
+
+<section class="card">
+  <h2>体験：覚えすぎると当たらなくなる（過学習）</h2>
+  <p>学習に使った<b>訓練データ</b>でよく当たっても、見たことのない<b>テストデータ</b>で当たらなければ意味がありません。
+  モデルを複雑にしすぎると、訓練データの「たまたまのブレ」まで覚えてしまい、テストで外れます。これが<b>過学習</b>。</p>
+  <div class="controls">
+    <label>モデルの複雑さ（多項式の次数） <input type="range" id="deg" min="1" max="12" step="1" value="3"> <span class="val" id="degv">3</span></label>
+    <button class="btn btn-small" id="btn-new">別のデータで試す</button>
+    <span class="status" id="st"></span>
+  </div>
+  <div class="canvas-row">
+    <div><canvas id="fit" width="520" height="320"></canvas><p class="canvas-caption">青い点＝訓練データ（学習に使う）、白抜きの点＝テストデータ（答え合わせにだけ使う）、灰色の線＝本当の規則、赤い線＝モデルの予測。</p></div>
+    <div><canvas id="err" width="520" height="320"></canvas><p class="canvas-caption">次数ごとの損失。訓練（青）は複雑にするほど下がり続けるが、テスト（赤）はある所から上がり始める＝過学習。ちょうど良い複雑さを選ぶのが大切。</p></div>
+  </div>
+  <div class="note"><b>試してみよう</b>：次数を 1 → 3 → 8 → 12 と上げていくと、赤い線が訓練の点を無理に通ろうとして暴れ、テストの損失が跳ね上がります。「別のデータで試す」で何度か確かめてください。実際のディープラーニングでは、データを増やす・正則化・早めに学習を止める、などで防ぎます。</div>
+</section>
+
+<section class="card card-review">
+  <h2>ふりかえり</h2>
+  <ol class="takeaways">
+    <li>ディープラーニング＝層を深く重ねたニューラルネットワークによる機械学習</li>
+    <li>どの章も「モデル → 損失 → 最適化（勾配降下法）」の繰り返しで学習する</li>
+    <li>訓練データとテストデータを分け、過学習していないかを確かめる</li>
+  </ol>
+  <div class="refs"><div class="refs-title">参考文献・さらに読む</div><ul>
+    <li><a href="https://www.deeplearningbook.org/" target="_blank" rel="noopener">Goodfellow, Bengio & Courville, Deep Learning (MIT Press)</a><span class="muted">　定番の教科書（英語・無料公開）</span></li>
+    <li><a href="https://playground.tensorflow.org/" target="_blank" rel="noopener">TensorFlow Playground</a><span class="muted">　訓練／テストの損失と過学習を観察できる</span></li>
+  </ul></div>
+  <p style="margin-top:12px"><a class="btn" href="chapters/ch01.html">第1章 パーセプトロンへ →</a></p>
+</section>
+
+</main>
+<footer class="site-footer"><p>動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究</p></footer>
+<script src="assets/js/content.js"></script>
+<script src="assets/js/common.js"></script>
+<script>
+(function () {
+  var $ = DL.$;
+  DL.arch("arch", { w: 900, h: 200, intro: "AI・機械学習・ディープラーニングの関係。部品をクリックすると説明が出ます。",
+    nodes: [
+      { id: "ai", x: 20, y: 60, w: 190, h: 80, color: "gray", label: "人工知能（AI）", sub: "人の知的な働きを機械で", desc: "人の知的な働きをコンピュータで実現しようとする分野全体。ルールを人が手で書く方法（エキスパートシステムなど）も含む。" },
+      { id: "ml", x: 270, y: 60, w: 190, h: 80, color: "blue", label: "機械学習", sub: "データから規則を見つける", desc: "ルールを人が書く代わりに、データから規則（重み）を自動で見つける方法。決定木、サポートベクターマシン、ニューラルネットワークなど。" },
+      { id: "dl", x: 520, y: 60, w: 190, h: 80, color: "amber", label: "ディープラーニング", sub: "深いニューラルネットワーク", desc: "機械学習のうち、層を深く重ねたニューラルネットワークを使うもの。2012 年ごろから画像・音声・言語で急速に性能が上がった。この教材の主役。" },
+      { id: "ex", x: 760, y: 50, w: 130, h: 100, color: "green", label: "13 章で学ぶ\n「形」の進化", desc: "パーセプトロン（1958）→ MLP → CNN → ResNet → 埋め込み → RNN → LSTM → GRU → Seq2Seq → Attention → Transformer → BERT → GPT。形は違っても、学習のしかたは下の 3 ステップで共通。" }
+    ],
+    edges: [ { from: "ai", to: "ml", color: "gray", label: "その一部" }, { from: "ml", to: "dl", color: "blue", label: "その一部" }, { from: "dl", to: "ex", color: "green" } ] });
+  Array.prototype.forEach.call(document.querySelectorAll("[id^=arch] .arch-label"), function () {});
+
+  // ---- 過学習デモ ----
+  var rng = new DL.RNG(2024), train = [], test = [], f = function (x) { return Math.sin(2.4 * x) * 0.8 + 0.2 * x; };
+  function newData() {
+    train = []; test = [];
+    for (var i = 0; i < 14; i++) { var x = -1 + 2 * rng.next(); train.push({ x: x, y: f(x) + rng.gauss() * 0.22 }); }
+    for (i = 0; i < 14; i++) { x = -1 + 2 * rng.next(); test.push({ x: x, y: f(x) + rng.gauss() * 0.22 }); }
+  }
+  function fit(deg) { // 最小二乗（正規方程式、わずかなリッジ）
+    var n = deg + 1, A = [], bvec = [];
+    for (var i = 0; i < n; i++) { A.push(new Array(n).fill(0)); bvec.push(0); }
+    train.forEach(function (p) { var pw = [1]; for (var k = 1; k < n; k++) pw.push(pw[k - 1] * p.x); for (i = 0; i < n; i++) { bvec[i] += pw[i] * p.y; for (var j = 0; j < n; j++) A[i][j] += pw[i] * pw[j]; } });
+    for (i = 0; i < n; i++) A[i][i] += 1e-9;
+    // ガウスの消去法
+    for (i = 0; i < n; i++) { var piv = i; for (var r = i + 1; r < n; r++) if (Math.abs(A[r][i]) > Math.abs(A[piv][i])) piv = r; var tmp = A[i]; A[i] = A[piv]; A[piv] = tmp; tmp = bvec[i]; bvec[i] = bvec[piv]; bvec[piv] = tmp; for (r = 0; r < n; r++) { if (r === i || Math.abs(A[i][i]) < 1e-14) continue; var fct = A[r][i] / A[i][i]; for (var c = i; c < n; c++) A[r][c] -= fct * A[i][c]; bvec[r] -= fct * bvec[i]; } }
+    var w = []; for (i = 0; i < n; i++) w.push(Math.abs(A[i][i]) < 1e-14 ? 0 : bvec[i] / A[i][i]);
+    return function (x) { var s = 0, pw = 1; for (var k = 0; k < n; k++) { s += w[k] * pw; pw *= x; } return s; };
+  }
+  function mse(model, pts) { var s = 0; pts.forEach(function (p) { var e = model(p.x) - p.y; s += e * e; }); return s / pts.length; }
+  function draw() {
+    var deg = +$("deg").value; $("degv").textContent = deg;
+    var model = fit(deg), cv = $("fit"), ctx = cv.getContext("2d"), W = cv.width, H = cv.height;
+    var px = function (x) { return 20 + (x + 1) / 2 * (W - 40); }, py = function (y) { return H / 2 - y * (H / 2 - 20) / 1.5; };
+    ctx.clearRect(0, 0, W, H); ctx.strokeStyle = "#e5e7eb"; ctx.beginPath(); ctx.moveTo(0, py(0)); ctx.lineTo(W, py(0)); ctx.stroke();
+    ctx.strokeStyle = "#9ca3af"; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.beginPath(); for (var i = 0; i <= 100; i++) { var x = -1 + 2 * i / 100; i ? ctx.lineTo(px(x), py(f(x))) : ctx.moveTo(px(x), py(f(x))); } ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = "#dc2626"; ctx.lineWidth = 2.5; ctx.beginPath(); for (i = 0; i <= 200; i++) { x = -1 + 2 * i / 200; var y = Math.max(-1.6, Math.min(1.6, model(x))); i ? ctx.lineTo(px(x), py(y)) : ctx.moveTo(px(x), py(y)); } ctx.stroke(); ctx.lineWidth = 1;
+    train.forEach(function (p) { ctx.fillStyle = "#2563eb"; ctx.beginPath(); ctx.arc(px(p.x), py(p.y), 5, 0, 7); ctx.fill(); });
+    test.forEach(function (p) { ctx.fillStyle = "#fff"; ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(px(p.x), py(p.y), 5, 0, 7); ctx.fill(); ctx.stroke(); });
+    DL.legend(cv, [{ color: "#2563eb", label: "訓練データ" }, { color: "#fff", label: "テストデータ（白抜き）" }, { color: "#9ca3af", label: "本当の規則" }, { color: "#dc2626", label: "モデルの予測（次数 " + deg + "）" }]);
+    var tr = [], te = []; for (var d = 1; d <= 12; d++) { var m = fit(d); tr.push(mse(m, train)); te.push(Math.min(mse(m, test), 2)); }
+    DL.lineChart($("err"), [{ name: "訓練の損失", values: tr, color: "#2563eb" }, { name: "テストの損失", values: te, color: "#dc2626" }], { xLabel: "次数 1 〜 12", yLabel: "平均二乗誤差", yMin: 0, yMax: Math.max(0.5, Math.min(2, Math.max.apply(null, te) * 1.1)) });
+    var e = $("err").getContext("2d"), L = 48, R = 12; var xx = L + (520 - L - R) * (deg - 1) / 11; e.strokeStyle = "#f59e0b"; e.setLineDash([4, 3]); e.beginPath(); e.moveTo(xx, 14); e.lineTo(xx, 320 - 30); e.stroke(); e.setLineDash([]);
+    var trm = mse(model, train), tem = mse(model, test);
+    $("st").textContent = "訓練の損失 " + trm.toFixed(3) + " ／ テストの損失 " + tem.toFixed(3) + (deg >= 8 && tem > trm * 3 ? "　← 過学習！訓練だけ良くてテストが悪い" : deg <= 1 ? "　← 単純すぎて訓練もテストも悪い（学習不足）" : "");
+    DL.log(0, "overfit", { deg: deg, train: trm, test: tem });
+  }
+  $("deg").addEventListener("input", draw);
+  $("btn-new").addEventListener("click", function () { newData(); draw(); });
+  newData(); draw();
+  if (DL.polishUI) DL.polishUI(document);
+})();
+</script>
+</body>
+</html>

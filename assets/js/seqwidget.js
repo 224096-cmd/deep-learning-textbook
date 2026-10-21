@@ -14,9 +14,9 @@
     c.innerHTML = "";
     var ctl = el("div", { class: "controls" });
     ctl.appendChild(el("label", { html: "覚えておく長さ T <input type='range' id='" + id("T") + "' min='5' max='60' step='5' value='" + (opts.T || 30) + "'> <span class='val' id='" + id("Tv") + "'>" + (opts.T || 30) + "</span>" }));
-    ctl.appendChild(el("label", { html: "隠れ状態の大きさ <input type='range' id='" + id("H") + "' min='2' max='16' step='1' value='" + (opts.H || 8) + "'> <span class='val' id='" + id("Hv") + "'>" + (opts.H || 8) + "</span>" }));
-    ctl.appendChild(el("label", { html: "最適化：<select id='" + id("opt") + "'><option value='adam'>Adam</option><option value='sgd'>SGD（素朴）</option></select>" }));
-    ctl.appendChild(el("label", { html: "学習率 <input type='number' id='" + id("lr") + "' value='" + (opts.lr || 0.01) + "' step='0.005' min='0.0005' style='width:80px'>" }));
+    ctl.appendChild(el("label", { "data-adv": "1", html: "隠れ状態の大きさ <input type='range' id='" + id("H") + "' min='2' max='16' step='1' value='" + (opts.H || 8) + "'> <span class='val' id='" + id("Hv") + "'>" + (opts.H || 8) + "</span>" }));
+    ctl.appendChild(el("label", { "data-adv": "1", html: "最適化：<select id='" + id("opt") + "'><option value='adam'>Adam</option><option value='sgd'>SGD（素朴）</option></select>" }));
+    ctl.appendChild(el("label", { "data-adv": "1", html: "学習率 <input type='number' id='" + id("lr") + "' value='" + (opts.lr || 0.01) + "' step='0.005' min='0.0005' style='width:80px'>" }));
     var ctl2 = el("div", { class: "controls" });
     var btn = el("button", { class: "btn btn-small", text: "学習スタート（最大 " + (opts.steps || 1500) + " ステップ）" });
     var stop = el("button", { class: "btn btn-small btn-outline", text: "停止" });

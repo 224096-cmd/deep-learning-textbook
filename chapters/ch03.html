@@ -48,10 +48,10 @@
         <option value="custom">自分で作る</option>
       </select>
     </label>
-    <label><input type="checkbox" id="relu" checked> ReLU（負を 0 に）</label>
-    <label>ストライド <select id="stride"><option value="1">1</option><option value="2">2</option></select></label>
+    <label data-adv><input type="checkbox" id="relu" checked> ReLU（負を 0 に）</label>
+    <label data-adv>ストライド <select id="stride"><option value="1">1</option><option value="2">2</option></select></label>
     <button class="btn btn-small" id="btn-anim">フィルタが滑る様子を再生</button>
-    <label><input type="checkbox" id="loop" checked> 繰り返し再生</label>
+    <label data-adv><input type="checkbox" id="loop" checked> 繰り返し再生</label>
     <button class="btn btn-small" id="btn-reset3">リセット</button>
   </div>
   <div class="canvas-row">
@@ -81,7 +81,7 @@
   </div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：重みの数を MLP と比べる</h2>
   <div class="controls">
     <label>画像サイズ <input type="range" id="imsz" min="8" max="256" step="8" value="28"> <span class="val" id="imszv">28</span>px</label>

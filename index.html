@@ -31,6 +31,7 @@
         <p id="prog-text" class="muted">まだ始めていません。第1章からどうぞ。</p>
         <div class="progress-bar"><div id="prog-fill" style="width:0%"></div></div>
         <div class="controls" id="prog-actions"></div>
+        <p style="margin:6px 0 0"><a href="intro.html" class="btn btn-outline btn-small">はじめに：基礎知識（損失・最適化・過学習）を先に読む</a></p>
         <h3>おすすめの進め方</h3>
         <ul style="margin:0">
           <li><b>はじめての人</b>：第1章から順番に（1 章 15〜25 分）</li>
@@ -86,6 +87,10 @@
       log.forEach(function (r) { if (r.event === "quiz") done[r.chapter] = true; if (r.event === "open" && r.chapter >= 1) lastOpen = r.chapter; });
       var nDone = Object.keys(done).length;
       var root = document.getElementById("chapters");
+      root.appendChild(DL.el("div", { class: "ch-group", text: "まず読む" }));
+      var g0 = DL.el("div", { class: "chapter-grid" });
+      var a0 = DL.el("a", { href: "intro.html", class: "ch-card" }, [DL.el("div", { class: "ch-no", text: "0" }), DL.el("div", { class: "ch-title", text: "はじめに：ディープラーニングの基礎知識" }), DL.el("div", { class: "ch-en", text: "Basics" }), DL.el("p", { class: "ch-desc", text: "AI・機械学習・深層学習の関係、学習の 3 ステップ（モデル・損失・最適化）、過学習を体験" }), DL.el("div", { class: "ch-meta" }, [DL.el("span", { text: "約 15 分" })])]);
+      g0.appendChild(a0); root.appendChild(g0);
       groups.forEach(function (g) {
         root.appendChild(DL.el("div", { class: "ch-group", text: g[0] }));
         var grid = DL.el("div", { class: "chapter-grid" });

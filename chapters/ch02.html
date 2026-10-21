@@ -64,7 +64,7 @@
         <option value="linear">なし（線形）※比較用</option>
       </select>
     </label>
-    <label>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.3"> <span class="val" id="lrv">0.30</span></label>
+    <label data-adv>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.3"> <span class="val" id="lrv">0.30</span></label>
   </div>
   <div class="controls">
     <button class="btn btn-small" id="btn-reset">初期化</button>
@@ -94,7 +94,7 @@
   </div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>記録表</h2>
   <p class="hint">新しい結果が上に追加されます。表の中はスクロールできます。</p>
   <div class="table-wrap scroll"><table class="data" id="tbl"><tr><th>#</th><th>問題</th><th>隠れ数</th><th>活性化</th><th>学習率</th><th>エポック</th><th>損失</th><th>正答率</th></tr></table></div>

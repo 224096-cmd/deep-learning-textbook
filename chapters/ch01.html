@@ -40,9 +40,9 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
         <option value="xor">XOR（排他的論理和）※解けない</option>
       </select>
     </label>
-    <label>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.2"> <span class="val" id="lrv">0.20</span></label>
+    <label data-adv>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.2"> <span class="val" id="lrv">0.20</span></label>
     <button class="btn btn-small" id="btn-reset">重みをリセット</button>
-    <button class="btn btn-small" id="btn-data">点を元に戻す</button>
+    <button class="btn btn-small" id="btn-data" data-adv>点を元に戻す</button>
     <button class="btn btn-small" id="btn-step">1 サンプル学習</button>
     <button class="btn btn-small" id="btn-epoch">1 エポック学習</button>
     <button class="btn btn-small" id="btn-auto">自動（20 エポック）</button>
@@ -67,7 +67,7 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
   </div>
 </section>
 
-<section class="card">
+<section class="card adv-section">
   <h2>体験②：手で重みを動かす</h2>
   <div class="controls">
     <label>w1 <input type="range" id="mw1" min="-3" max="3" step="0.05" value="1"> <span class="val" id="mw1v">1.00</span></label>
