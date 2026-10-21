@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第11章 Transformer</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    <b>Transformer（2017, "Attention Is All You Need"）</b>は RNN を捨て、<b>Attention だけ</b>で系列を処理します。
+    各単語が文中の<b>すべての単語</b>に注意を向ける<b>自己注意（Self-Attention）</b>を、見る観点の違う<b>複数のヘッド</b>で同時に行い、
+    RNN のように 1 語ずつ待たずに<b>全単語を一度に（並列に）</b>計算できます。順番の情報は<b>位置エンコーディング</b>で足します。
+  </div>
+  <p class="video-ref">動画の対応箇所：47:30〜「Transformer, BERT and GPT」</p>
+  <div class="code">// 1 つの Transformer ブロック
+X  = 埋め込み + 位置エンコーディング
+Q = X·Wq,  K = X·Wk,  V = X·Wv            （ヘッドごとに別の W）
+A = softmax( Q·Kᵀ / √d )                  全単語 × 全単語 の注意の表
+X  = X + A·V                              残差接続（第4章）
+X  = X + FFN(X)                           各単語ごとの小さな MLP（第2章）</div>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">自己注意</span>：Query も Key も Value も同じ文から作る Attention。文中の単語同士の関係を取り出す。</li>
+    <li><span class="term">マルチヘッド</span>：Attention を h 組並列に行う。ヘッドごとに「主語と動詞」「代名詞と指す先」など別の関係を見る。</li>
+    <li><span class="term">位置エンコーディング</span>：単語の位置を表すベクトル。sin・cos の波を使うと、どんな長さでも作れる。</li>
+    <li><span class="term">√d でのスケール</span>：次元が大きいと内積が大きくなりすぎ softmax が尖るので、割って調整する。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：マルチヘッド自己注意を計算する</h2>
+  <div class="controls">
+    <label>文（スペース区切り）<input type="text" id="sent" value="猫 が 魚 を 食べた" size="30"></label>
+    <label>ヘッド数 <select id="heads"><option>1</option><option selected>2</option><option>4</option></select></label>
+    <label><input type="checkbox" id="pe" checked> 位置エンコーディングを足す</label>
+    <label><input type="checkbox" id="causal"> 未来を見ない（因果マスク：GPT 型）</label>
+    <button class="btn btn-small" id="btn-shuffle">単語順を入れ替える</button>
+    <button class="btn btn-small" id="btn-reseed">重みの乱数を変える</button>
+  </div>
+  <div class="canvas-row" id="headrow"></div>
+  <p class="canvas-caption">行＝Query の単語、列＝Key の単語。各行の合計は 1。（重みは学習していない乱数なので、関係は「それらしい」とは限りません。構造を見るための実験です）</p>
+  <div id="export11"></div>
+  <div class="note">
+    <b>試してみよう</b>：位置エンコーディングの✓を外して「単語順を入れ替える」と、各単語の行の中身（数値の集合）は<b>入れ替わるだけで同じ</b>になります。
+    Attention 自体は語順を知らない（順番を入れ替えても同じ結果が並び替わるだけ）ので、位置の情報を別に足す必要があるのです。
+    ✓を入れて同じことをすると値そのものが変わります。
+  </div>
+</section>
+
+<section class="card">
+  <h2>体験②：位置エンコーディング（sin・cos の波）</h2>
+  <div class="controls">
+    <label>位置の数 <input type="range" id="npos" min="8" max="64" step="8" value="32"> <span class="val" id="nposv">32</span></label>
+    <label>次元 d <input type="range" id="dmodel" min="8" max="64" step="8" value="32"> <span class="val" id="dmodelv">32</span></label>
+  </div>
+  <canvas id="pecv" width="860" height="260"></canvas>
+  <p class="canvas-caption">行＝位置、列＝次元。左の次元は速い波、右は遅い波。各行（位置）のパターンがすべて違うので、「何番目か」を区別できる。</p>
+</section>
+
+<section class="card">
+  <h2>体験③：RNN と Transformer の計算の違い</h2>
+  <div class="controls">
+    <label>文の長さ n <input type="range" id="nlen" min="4" max="512" step="4" value="64"> <span class="val" id="nlenv">64</span></label>
+  </div>
+  <canvas id="cost" width="520" height="110"></canvas>
+  <p class="muted" id="costtxt"></p>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz11"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(11);
+  var $ = DL.$;
+  var D = 16, seed = 1234, records = [];
+  function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; }
+  function embed(word) { var r = new DL.RNG(hash(word)); var v = []; for (var k = 0; k < D; k++) v.push(r.gauss()); return v; }
+  function posEnc(p, d) { var v = []; for (var k = 0; k < d; k++) { var f = Math.pow(10000, -Math.floor(k / 2) * 2 / d); v.push(k % 2 === 0 ? Math.sin(p * f) : Math.cos(p * f)); } return v; }
+  function mat(r, c, rng) { var m = []; for (var i = 0; i < r; i++) { var row = []; for (var j = 0; j < c; j++) row.push(rng.gauss() / Math.sqrt(c)); m.push(row); } return m; }
+  function mv(W, v) { return W.map(function (row) { return DL.dot(row, v); }); }
+  function compute() {
+    var words = $("sent").value.trim().split(/\s+/).filter(Boolean); if (!words.length) return;
+    var H = +$("heads").value, dh = D / H, usePE = $("pe").checked, causal = $("causal").checked;
+    var X = words.map(function (w, p) { var e = embed(w); if (usePE) { var pe = posEnc(p, D); e = e.map(function (x, k) { return x + pe[k]; }); } return e; });
+    var row = $("headrow"); row.innerHTML = "";
+    var rng = new DL.RNG(seed), rec = { sentence: words.join(" "), heads: H, pos_enc: usePE, causal: causal };
+    for (var h = 0; h < H; h++) {
+      var Wq = mat(dh, D, rng), Wk = mat(dh, D, rng);
+      var Q = X.map(function (x) { return mv(Wq, x); }), K = X.map(function (x) { return mv(Wk, x); });
+      var A = Q.map(function (q, i) {
+        var sc = K.map(function (k, j) { return causal && j > i ? -1e9 : DL.dot(q, k) / Math.sqrt(dh); });
+        return DL.softmax(sc);
+      });
+      var cv = DL.el("canvas", { width: 400, height: 60 + words.length * 34 });
+      var wrap = DL.el("div", {}, [DL.el("p", { html: "<b>ヘッド " + (h + 1) + "</b>" }), cv]);
+      row.appendChild(wrap);
+      DL.heatmap(cv, A, words, words, { vmin: 0, vmax: 1, showValues: true, left: 70, top: 40 });
+      rec["head" + (h + 1) + "_row1"] = A[0].map(function (v) { return v.toFixed(2); }).join(" ");
+    }
+    records.push(rec); if (records.length > 200) records.shift();
+  }
+  ["sent", "heads", "pe", "causal"].forEach(function (id) { $(id).addEventListener("change", compute); });
+  $("sent").addEventListener("input", compute);
+  $("btn-shuffle").addEventListener("click", function () { var w = $("sent").value.trim().split(/\s+/); for (var i = w.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = w[i]; w[i] = w[j]; w[j] = t; } $("sent").value = w.join(" "); compute(); DL.log(11, "shuffle", { pe: $("pe").checked }); });
+  $("btn-reseed").addEventListener("click", function () { seed = Math.floor(Math.random() * 1e9); compute(); });
+  DL.exportButtons("export11", function () { return records; }, Object.keys(records[0] || { sentence: 1, heads: 1, pos_enc: 1, causal: 1, head1_row1: 1, head2_row1: 1 }), "ch11_self_attention", 11);
+  compute();
+
+  function drawPE() {
+    var n = +$("npos").value, d = +$("dmodel").value; $("nposv").textContent = n; $("dmodelv").textContent = d;
+    var M = []; for (var p = 0; p < n; p++) M.push(posEnc(p, d));
+    DL.heatmap($("pecv"), M, M.map(function (_, p) { return p % 4 === 0 ? "pos " + p : ""; }), [], { diverging: true, vmin: -1, vmax: 1, left: 50, top: 10 });
+  }
+  $("npos").addEventListener("input", drawPE); $("dmodel").addEventListener("input", drawPE); drawPE();
+
+  function cost() {
+    var n = +$("nlen").value; $("nlenv").textContent = n;
+    DL.barChart($("cost"), [{ label: "RNN：順番待ちの回数", value: n, color: "#dc2626" }, { label: "Transformer：順番待ち", value: 1, color: "#2563eb" }, { label: "Transformer：注意の表のマス数", value: n * n, color: "#7c3aed" }], { left: 190, format: function (v) { return v.toLocaleString(); } });
+    $("costtxt").textContent = "RNN は n=" + n + " 語を 1 語ずつ " + n + " 回順番に処理（並列化できない）。Transformer は全単語を一度に処理できる代わりに、n×n=" + (n * n).toLocaleString() + " マスの注意の表を作る（文が 2 倍になると 4 倍）。この n² のコストが、長い文章を扱うときの課題になっています。";
+  }
+  $("nlen").addEventListener("input", cost); cost();
+
+  DL.quiz("quiz11", 11, [
+    { q: "Transformer に位置エンコーディングが必要な理由は？", choices: ["単語数を数えるため", "Attention は語順を知らない（入れ替えても結果が並び替わるだけ）ため", "学習を速くするため", "埋め込みを小さくするため"], answer: 1 },
+    { q: "マルチヘッドの利点は？", choices: ["計算が遅くなる", "ヘッドごとに異なる種類の関係（文法・意味など）を同時に見られる", "位置が不要になる", "残差接続が不要になる"], answer: 1 },
+    { q: "RNN と比べた Transformer の計算上の特徴は？", choices: ["全単語を並列に処理できるが、文の長さ n の 2 乗に比例する注意の表が必要", "1 語ずつしか処理できない", "長い文ほど速い", "メモリを使わない"], answer: 0 }
+  ]);
+})();
+</script>
+</body>
+</html>

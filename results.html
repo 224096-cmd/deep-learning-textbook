@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学習記録 | 動かして学ぶディープラーニング</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header class="site-header compact">
+    <div class="nav-row"><a href="index.html" class="nav-home">← 目次へ</a><span class="nav-title">学習記録の書き出し</span><span></span></div>
+  </header>
+  <main class="container wide">
+    <section class="card">
+      <h2>この端末に残っている記録</h2>
+      <p class="muted">記録はこのブラウザ内（localStorage）だけに保存され、外部には送信されません。卒論の分析に使うときは、下のボタンでファイルに書き出してください。</p>
+      <div class="controls">
+        <label>学習者 ID（任意）<input type="text" id="uid" placeholder="例：A01" size="10"></label>
+        <button class="btn btn-small" id="btn-csv">CSV で書き出し</button>
+        <button class="btn btn-small" id="btn-json">JSON で書き出し</button>
+        <button class="btn btn-small" id="btn-md">Markdown レポート</button>
+        <button class="btn btn-small btn-outline" id="btn-clear">記録を消去</button>
+      </div>
+      <p class="status" id="st"></p>
+    </section>
+    <section class="card">
+      <h2>章ごとの集計</h2>
+      <div class="table-wrap"><table class="data" id="sum"><tr><th>章</th><th>ページを開いた回数</th><th>操作イベント数</th><th>小テスト回数</th><th>小テスト最高点</th><th>最新の正答率</th></tr></table></div>
+      <canvas id="quizc" width="860" height="260"></canvas>
+      <p class="canvas-caption">各章の小テスト最高点（正答率）</p>
+    </section>
+    <section class="card">
+      <h2>最近の記録（最新 50 件）</h2>
+      <div class="table-wrap"><table class="data" id="recent"><tr><th>時刻</th><th>章</th><th>イベント</th><th>内容</th></tr></table></div>
+    </section>
+  </main>
+  <footer class="site-footer"><p>動かして学ぶディープラーニング ｜ © 2026 三重大学 教育学部 技術・ものづくり教育コース 卒業研究</p></footer>
+  <script src="assets/js/common.js"></script>
+  <script>
+  (function () {
+    var $ = DL.$;
+    function flat() {
+      var uid = $("uid").value || "";
+      return DL.loadLog().map(function (r) { return { user: uid, time: r.time, chapter: r.chapter, event: r.event, data: JSON.stringify(r.data) }; });
+    }
+    function summary() {
+      var log = DL.loadLog(), S = {};
+      DL.CHAPTERS.forEach(function (c) { S[c.no] = { chapter: c.no, title: c.title, opens: 0, events: 0, quizzes: 0, best: null, last: null }; });
+      log.forEach(function (r) {
+        var s = S[r.chapter]; if (!s) return;
+        if (r.event === "open") s.opens++; else if (r.event === "quiz") { s.quizzes++; var a = r.data.correct / r.data.total; s.best = s.best === null ? a : Math.max(s.best, a); s.last = a; } else s.events++;
+      });
+      return DL.CHAPTERS.map(function (c) { return S[c.no]; });
+    }
+    function render() {
+      var log = DL.loadLog(), sm = summary();
+      $("st").textContent = "記録件数：" + log.length + " 件" + (log.length ? "（最初 " + log[0].time.slice(0, 16).replace("T", " ") + " 〜 最新 " + log[log.length - 1].time.slice(0, 16).replace("T", " ") + "）" : "");
+      var tb = $("sum"); tb.innerHTML = "<tr><th>章</th><th>ページを開いた回数</th><th>操作イベント数</th><th>小テスト回数</th><th>小テスト最高点</th><th>最新の正答率</th></tr>";
+      sm.forEach(function (s) { var tr = document.createElement("tr"); tr.innerHTML = "<td>第" + s.chapter + "章 " + s.title + "</td><td>" + s.opens + "</td><td>" + s.events + "</td><td>" + s.quizzes + "</td><td>" + (s.best === null ? "-" : (s.best * 100).toFixed(0) + "%") + "</td><td>" + (s.last === null ? "-" : (s.last * 100).toFixed(0) + "%") + "</td>"; tb.appendChild(tr); });
+      DL.lineChart($("quizc"), [{ name: "小テスト最高点", values: sm.map(function (s) { return s.best === null ? NaN : s.best; }) }], { yMin: 0, yMax: 1, xLabel: "章（1〜13）", yLabel: "正答率" });
+      var rc = $("recent"); rc.innerHTML = "<tr><th>時刻</th><th>章</th><th>イベント</th><th>内容</th></tr>";
+      log.slice(-50).reverse().forEach(function (r) { var tr = document.createElement("tr"); tr.innerHTML = "<td>" + r.time.slice(0, 19).replace("T", " ") + "</td><td>" + r.chapter + "</td><td>" + r.event + "</td><td style='text-align:left;font-size:0.8rem'>" + JSON.stringify(r.data).slice(0, 120) + "</td>"; rc.appendChild(tr); });
+    }
+    $("btn-csv").addEventListener("click", function () { DL.download(DL.toCSV(flat(), ["user", "time", "chapter", "event", "data"]), "dl_log_" + DL.stamp() + ".csv", "text/csv"); });
+    $("btn-json").addEventListener("click", function () { DL.download(JSON.stringify({ user: $("uid").value || "", exported: new Date().toISOString(), summary: summary(), log: DL.loadLog() }, null, 2), "dl_log_" + DL.stamp() + ".json", "application/json"); });
+    $("btn-md").addEventListener("click", function () {
+      var sm = summary().map(function (s) { return { 章: "第" + s.chapter + "章 " + s.title, 閲覧: s.opens, 操作: s.events, 小テスト回数: s.quizzes, 最高点: s.best === null ? "-" : (s.best * 100).toFixed(0) + "%", 最新: s.last === null ? "-" : (s.last * 100).toFixed(0) + "%" }; });
+      var md = "# 動かして学ぶディープラーニング 学習記録\n\n学習者 ID: " + ($("uid").value || "(未設定)") + "  \n書き出し: " + new Date().toISOString() + "  \n記録件数: " + DL.loadLog().length + "\n\n## 章ごとの集計\n\n" + DL.toMarkdownTable(sm, ["章", "閲覧", "操作", "小テスト回数", "最高点", "最新"]);
+      DL.download(md, "dl_report_" + DL.stamp() + ".md", "text/markdown");
+    });
+    $("btn-clear").addEventListener("click", function () { if (confirm("この端末の記録をすべて消去します。先に書き出しましたか？")) { DL.clearLog(); render(); } });
+    render();
+  })();
+  </script>
+</body>
+</html>

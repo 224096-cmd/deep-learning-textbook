@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第4章 ResNet</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    層を深くすれば賢くなるはず……なのに、昔は 20 層を超えると逆に性能が落ちました。原因の 1 つが<b>勾配消失</b>：誤差を逆向きに伝えるうちに、
+    入力側の層に届く勾配がどんどん小さくなり、前の方の層がほとんど学習できなくなる現象です。
+    <b>ResNet（2015）</b>は「層の出力に入力をそのまま足す」<b>残差接続（スキップ接続）</b>で、勾配の通り道を作りました。
+  </div>
+  <p class="video-ref">動画の対応箇所：13:18〜「CNN and ResNet」</p>
+  <div class="code">// 普通の層        h_next = f(W·h + b)
+// 残差接続つき     h_next = h + f(W·h + b)    ← 「変化分（残差）」だけ学習すればよい
+// 逆伝播では  ∂h_next/∂h = 1 + （小さい値）  となり、勾配が 1 のまま前へ素通りできる</div>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">勾配消失／勾配爆発</span>：層を通るたびに勾配が掛け算され、0 に近づく／巨大になる現象。</li>
+    <li><span class="term">残差（residual）</span>：「目標の出力 − 入力」の差分。ResNet の各層はこの差分だけを学ぶ。</li>
+    <li><span class="term">恒等写像</span>：入力をそのまま出力すること。残差接続があれば、層が何もしなくても恒等写像になるので、深くしても悪くはならない。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：層ごとの勾配の大きさを見る</h2>
+  <div class="controls">
+    <label>層の数 <input type="range" id="depth" min="2" max="60" step="1" value="30"> <span class="val" id="depthv">30</span></label>
+    <label>各層の幅 <input type="range" id="width" min="2" max="16" step="1" value="8"> <span class="val" id="widthv">8</span></label>
+    <label>初期重みの大きさ <input type="range" id="scale" min="0.3" max="2.0" step="0.1" value="1.0"> <span class="val" id="scalev">1.0</span></label>
+    <button class="btn btn-small" id="btn-grad">再計算（乱数を変える）</button>
+  </div>
+  <canvas id="gradc" width="800" height="260"></canvas>
+  <p class="canvas-caption">横軸＝層（左が入力側）、縦軸＝その層の重みに届く勾配の大きさ（対数軸）。赤＝普通の深いネット、青＝残差接続つき。</p>
+  <p class="status" id="gradtxt"></p>
+  <div id="export4a"></div>
+</section>
+
+<section class="card">
+  <h2>体験②：実際に学習して比べる（関数の当てはめ）</h2>
+  <div class="controls">
+    <label>層の数 <input type="range" id="tdepth" min="2" max="40" step="1" value="20"> <span class="val" id="tdepthv">20</span></label>
+    <label>学習率 <input type="range" id="tlr" min="0.001" max="0.05" step="0.001" value="0.01"> <span class="val" id="tlrv">0.010</span></label>
+    <button class="btn btn-small" id="btn-train">300 ステップ学習</button>
+    <button class="btn btn-small" id="btn-treset">初期化</button>
+    <span class="status" id="ttxt"></span>
+  </div>
+  <div class="canvas-row">
+    <div><canvas id="fit" width="420" height="260"></canvas><p class="canvas-caption">黒点＝教師データ（sin 波）、赤＝普通のネット、青＝残差ネットの予測</p></div>
+    <div><canvas id="tloss" width="420" height="260"></canvas><p class="canvas-caption">損失（平均二乗誤差）の推移</p></div>
+  </div>
+  <div id="export4b"></div>
+  <div class="note"><b>試してみよう</b>：層の数を 5 → 20 → 40 と増やして学習し、普通のネットの損失がどこで下がらなくなるか調べましょう。残差ネットは深くしても学習できますか？</div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz4"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(4);
+  var $ = DL.$;
+  var rng = new DL.RNG(21);
+  var gradRecords = [], trainRecords = [];
+
+  // --- 共通：幅 D の深いネット（入力 1 → D → ... → D → 出力 1） ---
+  function makeNet(L, D, scale, residual, seed) {
+    var r = new DL.RNG(seed);
+    var net = { L: L, D: D, residual: residual, Win: [], Ws: [], bs: [], Wout: [], bout: 0 };
+    for (var d = 0; d < D; d++) { net.Win.push(r.gauss() * 1.0); net.Wout.push(r.gauss() / Math.sqrt(D)); }
+    for (var l = 0; l < L; l++) {
+      var W = [], b = [];
+      for (var i = 0; i < D; i++) { var row = []; for (var j = 0; j < D; j++) row.push(r.gauss() * scale / Math.sqrt(D)); W.push(row); b.push(0); }
+      net.Ws.push(W); net.bs.push(b);
+    }
+    return net;
+  }
+  function forward(net, x) {
+    var hs = [], pre = [], h = net.Win.map(function (w) { return Math.tanh(w * x); });
+    hs.push(h);
+    for (var l = 0; l < net.L; l++) {
+      var z = [], hn = [];
+      for (var i = 0; i < net.D; i++) { var s = net.bs[l][i]; for (var j = 0; j < net.D; j++) s += net.Ws[l][i][j] * h[j]; z.push(s); }
+      for (i = 0; i < net.D; i++) hn.push((net.residual ? h[i] : 0) + Math.tanh(z[i]));
+      pre.push(z); h = hn; hs.push(h);
+    }
+    var y = net.bout; for (var k = 0; k < net.D; k++) y += net.Wout[k] * h[k];
+    return { hs: hs, pre: pre, y: y };
+  }
+  // 逆伝播：各層の重み勾配を返す（必要なら更新）
+  function backward(net, f, dy, lr) {
+    var g = net.Wout.map(function (w) { return dy * w; });  // ∂L/∂h_L
+    var gradNorms = new Array(net.L);
+    if (lr) { for (var k = 0; k < net.D; k++) net.Wout[k] -= lr * dy * f.hs[net.L][k]; net.bout -= lr * dy; }
+    for (var l = net.L - 1; l >= 0; l--) {
+      var gz = [], norm = 0, gprev = new Array(net.D).fill(0);
+      for (var i = 0; i < net.D; i++) { var t = Math.tanh(f.pre[l][i]); gz.push(g[i] * (1 - t * t)); }
+      for (i = 0; i < net.D; i++) for (var j = 0; j < net.D; j++) {
+        var gw = gz[i] * f.hs[l][j]; norm += gw * gw;
+        gprev[j] += net.Ws[l][i][j] * gz[i];
+        if (lr) net.Ws[l][i][j] -= lr * gw;
+      }
+      if (lr) for (i = 0; i < net.D; i++) net.bs[l][i] -= lr * gz[i];
+      if (net.residual) for (j = 0; j < net.D; j++) gprev[j] += g[j];
+      gradNorms[l] = Math.sqrt(norm);
+      g = gprev;
+    }
+    return gradNorms;
+  }
+
+  // --- 体験① ---
+  function gradExp() {
+    var L = parseInt($("depth").value, 10), D = parseInt($("width").value, 10), sc = parseFloat($("scale").value);
+    var seed = rng.int(1e9);
+    var plain = makeNet(L, D, sc, false, seed), res = makeNet(L, D, sc, true, seed);
+    var x = 0.7, target = 0.3;
+    var fp = forward(plain, x), fr = forward(res, x);
+    var gp = backward(plain, fp, 2 * (fp.y - target)), gr = backward(res, fr, 2 * (fr.y - target));
+    DL.lineChart($("gradc"), [{ name: "普通", values: gp, color: "#dc2626" }, { name: "残差接続", values: gr, color: "#2563eb" }], { logY: true, xLabel: "層（左＝入力側）", yLabel: "勾配の大きさ" });
+    var ratioP = gp[0] / gp[L - 1], ratioR = gr[0] / gr[L - 1];
+    $("gradtxt").textContent = "入力側の層の勾配 ÷ 出力側の層の勾配：普通 = " + ratioP.toExponential(2) + "、残差 = " + ratioR.toExponential(2) + "。普通のネットでは層を遡るほど勾配が " + (ratioP < 1 ? "消えて" : "膨らんで") + "いきます。";
+    gradRecords.push({ depth: L, width: D, init_scale: sc, plain_first: gp[0].toExponential(3), plain_last: gp[L - 1].toExponential(3), residual_first: gr[0].toExponential(3), residual_last: gr[L - 1].toExponential(3) });
+    DL.log(4, "grad_exp", gradRecords[gradRecords.length - 1]);
+  }
+  ["depth", "width", "scale"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = this.value; gradExp(); }); });
+  $("btn-grad").addEventListener("click", gradExp);
+  DL.exportButtons("export4a", function () { return gradRecords; }, ["depth", "width", "init_scale", "plain_first", "plain_last", "residual_first", "residual_last"], "ch04_gradient", 4);
+
+  // --- 体験② ---
+  var data = [], netP, netR, lossP = [], lossR = [], steps = 0;
+  for (var i = 0; i < 40; i++) { var xx = -1 + 2 * i / 39; data.push({ x: xx, y: Math.sin(xx * 3) * 0.8 }); }
+  function tinit() {
+    var L = parseInt($("tdepth").value, 10), seed = rng.int(1e9);
+    netP = makeNet(L, 8, 1.0, false, seed); netR = makeNet(L, 8, 1.0, true, seed);
+    lossP = []; lossR = []; steps = 0; tdraw();
+  }
+  function mse(net) { var s = 0; data.forEach(function (d) { var e = forward(net, d.x).y - d.y; s += e * e; }); return s / data.length; }
+  function tstep(net) {
+    var lr = parseFloat($("tlr").value);
+    for (var k = 0; k < data.length; k++) { var d = data[rng.int(data.length)]; var f = forward(net, d.x); backward(net, f, 2 * (f.y - d.y), lr); }
+  }
+  function tdraw() {
+    var cv = $("fit"), ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
+    var px = function (x) { return (x + 1) / 2 * cv.width; }, py = function (y) { return cv.height / 2 - y * cv.height / 2.4; };
+    ctx.strokeStyle = "#e5e7eb"; ctx.beginPath(); ctx.moveTo(0, py(0)); ctx.lineTo(cv.width, py(0)); ctx.stroke();
+    data.forEach(function (d) { ctx.fillStyle = "#111827"; ctx.beginPath(); ctx.arc(px(d.x), py(d.y), 3, 0, 7); ctx.fill(); });
+    [[netP, "#dc2626"], [netR, "#2563eb"]].forEach(function (pair) {
+      ctx.strokeStyle = pair[1]; ctx.lineWidth = 2; ctx.beginPath();
+      for (var i = 0; i <= 100; i++) { var x = -1 + 2 * i / 100, y = forward(pair[0], x).y; if (i === 0) ctx.moveTo(px(x), py(y)); else ctx.lineTo(px(x), py(y)); }
+      ctx.stroke();
+    });
+    DL.lineChart($("tloss"), [{ name: "普通", values: lossP, color: "#dc2626" }, { name: "残差接続", values: lossR, color: "#2563eb" }], { logY: true, xLabel: "ステップ（×10）", yLabel: "MSE" });
+    $("ttxt").textContent = "ステップ " + steps + " ／ 損失：普通 " + (lossP.length ? lossP[lossP.length - 1].toFixed(4) : "-") + "、残差 " + (lossR.length ? lossR[lossR.length - 1].toFixed(4) : "-");
+  }
+  $("btn-train").addEventListener("click", function () {
+    var btn = this; btn.disabled = true; var k = 0;
+    var t = setInterval(function () {
+      for (var i = 0; i < 10; i++) { tstep(netP); tstep(netR); steps++; }
+      lossP.push(mse(netP)); lossR.push(mse(netR)); tdraw(); k += 10;
+      if (k >= 300) {
+        clearInterval(t); btn.disabled = false;
+        var rec = { depth: netP.L, lr: parseFloat($("tlr").value), steps: steps, plain_mse: +mse(netP).toFixed(5), residual_mse: +mse(netR).toFixed(5) };
+        trainRecords.push(rec); DL.log(4, "train", rec);
+      }
+    }, 20);
+  });
+  $("btn-treset").addEventListener("click", tinit);
+  $("tdepth").addEventListener("input", function () { $("tdepthv").textContent = this.value; tinit(); });
+  $("tlr").addEventListener("input", function () { $("tlrv").textContent = parseFloat(this.value).toFixed(3); });
+  DL.exportButtons("export4b", function () { return trainRecords; }, ["depth", "lr", "steps", "plain_mse", "residual_mse"], "ch04_resnet_train", 4);
+
+  gradExp(); tinit();
+
+  DL.quiz("quiz4", 4, [
+    { q: "勾配消失とは？", choices: ["データが消えること", "逆伝播で層を遡るうちに勾配が 0 に近づき、前の層が学習できなくなること", "重みが全部 0 になること", "損失が負になること"], answer: 1 },
+    { q: "残差接続 h + f(h) が勾配消失を和らげる理由は？", choices: ["重みを大きくするから", "∂(h + f(h))/∂h = 1 + f′ となり、勾配が 1 のまま前の層へ素通りできるから", "活性化関数を使わないから", "層の数を減らすから"], answer: 1 },
+    { q: "残差接続があるネットワークで、ある層が「何も学習しなかった（f ≈ 0）」とすると、その層は？", choices: ["出力を壊す", "入力をそのまま次へ渡す（恒等写像）", "勾配を 0 にする", "学習を止める"], answer: 1, explain: "だから深くしても『少なくとも悪くはならない』のです。" }
+  ]);
+})();
+</script>
+</body>
+</html>

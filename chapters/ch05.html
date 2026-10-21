@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第5章 単語埋め込み</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    コンピュータは文字をそのまま計算できません。単語を番号にする（<b>one-hot</b>）と、「犬」と「猫」は「犬」と「机」と同じくらい無関係になってしまいます。
+    <b>単語埋め込み（Word Embedding）</b>は、単語を数個の数（ベクトル）で表し、<b>似た文脈で使われる単語が近くに来る</b>ように学習します（word2vec, 2013）。
+  </div>
+  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">one-hot ベクトル</span>：語彙数と同じ長さで、その単語の位置だけ 1、他は 0。どの 2 単語も「距離が同じ」。</li>
+    <li><span class="term">埋め込みベクトル</span>：各単語に対応する、長さ d（例：2〜300）の実数の列。学習で決まる。</li>
+    <li><span class="term">分布仮説</span>：「似た文脈に現れる単語は似た意味を持つ」という考え方。word2vec の土台。</li>
+    <li><span class="term">skip-gram</span>：中心の単語から、その周りの単語を当てるように学習する word2vec の方式。</li>
+    <li><span class="term">コサイン類似度</span>：2 つのベクトルの向きの近さ。1 に近いほど似ている。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験：小さな文章集から埋め込みを学習する</h2>
+  <p>文は「単語 単語 単語」のようにスペース区切りで書きます。自分の文章に書き換えても構いません。</p>
+  <textarea id="corpus"></textarea>
+  <div class="controls">
+    <label>次元数 d <input type="range" id="dim" min="2" max="8" step="1" value="2"> <span class="val" id="dimv">2</span></label>
+    <label>窓の幅 <input type="range" id="win" min="1" max="3" step="1" value="2"> <span class="val" id="winv">2</span></label>
+    <label>学習率 <input type="range" id="lr" min="0.01" max="0.3" step="0.01" value="0.1"> <span class="val" id="lrv">0.10</span></label>
+    <button class="btn btn-small" id="btn-init">初期化</button>
+    <button class="btn btn-small" id="btn-train">50 エポック学習</button>
+    <span class="status" id="st"></span>
+  </div>
+  <div class="canvas-row">
+    <div>
+      <canvas id="plot" width="440" height="440"></canvas>
+      <p class="canvas-caption">埋め込みの散布図（d&gt;2 のときは主成分 2 つに射影）。学習が進むと、同じような文脈の単語が集まる。</p>
+    </div>
+    <div>
+      <p><b>似ている単語を調べる</b></p>
+      <div class="controls">
+        <label>単語 <select id="qword"></select></label>
+      </div>
+      <div class="table-wrap"><table class="data" id="simtbl"><tr><th>単語</th><th>コサイン類似度</th></tr></table></div>
+      <p><b>単語の足し算・引き算</b>（A − B + C に最も近い単語）</p>
+      <div class="controls">
+        <select id="aw"></select> − <select id="bw"></select> + <select id="cw"></select>
+        <button class="btn btn-small" id="btn-analogy">計算</button>
+      </div>
+      <p class="status" id="analogy"></p>
+      <div id="export5"></div>
+    </div>
+  </div>
+  <div class="note">
+    <b>試してみよう</b>：学習前（初期化直後）の散布図はバラバラです。50 エポックずつ学習させ、「犬・猫・鳥」「王・女王」「食べる・飲む」がどう集まるか観察しましょう。
+    one-hot では「犬と猫の距離」＝「犬と机の距離」でしたが、埋め込みでは違いが出ます。
+  </div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz5"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(5);
+  var $ = DL.$;
+  var rng = new DL.RNG(5);
+  $("corpus").value = [
+    "王 は 城 に 住む", "女王 は 城 に 住む", "王 は 国 を 治める", "女王 は 国 を 治める",
+    "犬 は 骨 を 食べる", "猫 は 魚 を 食べる", "鳥 は 虫 を 食べる", "犬 は 庭 で 走る", "猫 は 庭 で 寝る", "鳥 は 空 を 飛ぶ",
+    "子ども は 牛乳 を 飲む", "子ども は パン を 食べる", "大人 は コーヒー を 飲む", "大人 は パン を 食べる",
+    "犬 は 水 を 飲む", "猫 は 水 を 飲む", "王 は ワイン を 飲む", "女王 は 紅茶 を 飲む",
+    "机 の 上 に 本 が ある", "机 の 上 に ペン が ある", "本 を 読む", "ペン で 書く",
+    "車 は 道 を 走る", "電車 は 線路 を 走る", "車 は 速い", "電車 は 速い", "犬 は 速い"
+  ].join("\n");
+
+  var vocab = [], idx = {}, sents = [], E = [], C = [], epoch = 0, records = [];
+  function build() {
+    vocab = []; idx = {}; sents = [];
+    $("corpus").value.split(/\n/).forEach(function (line) {
+      var ws = line.trim().split(/\s+/).filter(Boolean); if (!ws.length) return;
+      sents.push(ws.map(function (w) { if (idx[w] === undefined) { idx[w] = vocab.length; vocab.push(w); } return idx[w]; }));
+    });
+  }
+  function init() {
+    build();
+    var d = parseInt($("dim").value, 10);
+    E = vocab.map(function () { var v = []; for (var k = 0; k < d; k++) v.push(rng.gauss() * 0.3); return v; });
+    C = vocab.map(function () { var v = []; for (var k = 0; k < d; k++) v.push(rng.gauss() * 0.3); return v; });
+    epoch = 0;
+    ["qword", "aw", "bw", "cw"].forEach(function (id) { var s = $(id); s.innerHTML = ""; vocab.forEach(function (w) { s.appendChild(DL.el("option", { value: w, text: w })); }); });
+    if (idx["王"] !== undefined) { $("aw").value = "王"; $("bw").value = "城"; $("cw").value = "魚"; $("qword").value = "犬"; }
+    draw();
+  }
+  // skip-gram + 負例サンプリング
+  function trainEpoch() {
+    var lr = parseFloat($("lr").value), win = parseInt($("win").value, 10), d = E[0].length, loss = 0, n = 0;
+    sents.forEach(function (s) {
+      for (var i = 0; i < s.length; i++) for (var j = Math.max(0, i - win); j <= Math.min(s.length - 1, i + win); j++) {
+        if (i === j) continue;
+        var pairs = [[s[j], 1]];
+        for (var k = 0; k < 3; k++) pairs.push([rng.int(vocab.length), 0]);
+        pairs.forEach(function (p) {
+          var o = p[0], label = p[1], z = DL.dot(E[s[i]], C[o]), pr = DL.sigmoid(z), g = (pr - label);
+          loss += -(label * Math.log(pr + 1e-9) + (1 - label) * Math.log(1 - pr + 1e-9)); n++;
+          for (var q = 0; q < d; q++) { var ge = g * C[o][q], gc = g * E[s[i]][q]; E[s[i]][q] -= lr * ge; C[o][q] -= lr * gc; }
+        });
+      }
+    });
+    epoch++;
+    return loss / n;
+  }
+  function norm(v) { return Math.sqrt(DL.dot(v, v)) || 1e-9; }
+  function cos(a, b) { return DL.dot(a, b) / (norm(a) * norm(b)); }
+  // 2 次元へ射影（PCA：べき乗法で上位 2 主成分）
+  function project() {
+    var d = E[0].length, n = E.length;
+    if (d === 2) return E.map(function (v) { return v.slice(); });
+    var mean = new Array(d).fill(0); E.forEach(function (v) { for (var k = 0; k < d; k++) mean[k] += v[k] / n; });
+    var X = E.map(function (v) { return v.map(function (x, k) { return x - mean[k]; }); });
+    var comps = [];
+    for (var c = 0; c < 2; c++) {
+      var w = []; for (var k = 0; k < d; k++) w.push(rng.gauss());
+      for (var it = 0; it < 50; it++) {
+        var nw = new Array(d).fill(0);
+        X.forEach(function (x) { var p = DL.dot(x, w); for (var k = 0; k < d; k++) nw[k] += p * x[k]; });
+        comps.forEach(function (cc) { var p = DL.dot(nw, cc); for (var k = 0; k < d; k++) nw[k] -= p * cc[k]; });
+        var nn = norm(nw); w = nw.map(function (x) { return x / nn; });
+      }
+      comps.push(w);
+    }
+    return X.map(function (x) { return [DL.dot(x, comps[0]), DL.dot(x, comps[1])]; });
+  }
+  function draw() {
+    var cv = $("plot"), ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
+    var P = project(), mx = 0.01; P.forEach(function (p) { mx = Math.max(mx, Math.abs(p[0]), Math.abs(p[1])); });
+    ctx.strokeStyle = "#e5e7eb"; ctx.beginPath(); ctx.moveTo(cv.width / 2, 0); ctx.lineTo(cv.width / 2, cv.height); ctx.moveTo(0, cv.height / 2); ctx.lineTo(cv.width, cv.height / 2); ctx.stroke();
+    ctx.font = "13px sans-serif"; ctx.textAlign = "center";
+    var q = $("qword").value;
+    P.forEach(function (p, i) {
+      var x = cv.width / 2 + p[0] / mx * (cv.width / 2 - 24), y = cv.height / 2 - p[1] / mx * (cv.height / 2 - 24);
+      ctx.fillStyle = vocab[i] === q ? "#dc2626" : "#2563eb"; ctx.beginPath(); ctx.arc(x, y, 4, 0, 7); ctx.fill();
+      ctx.fillStyle = "#1f2430"; ctx.fillText(vocab[i], x, y - 8);
+    });
+    // 類似度表
+    var tb = $("simtbl"); tb.innerHTML = "<tr><th>単語</th><th>コサイン類似度</th></tr>";
+    if (idx[q] !== undefined) {
+      var sims = vocab.map(function (w, i) { return { w: w, s: cos(E[idx[q]], E[i]) }; }).filter(function (o) { return o.w !== q; }).sort(function (a, b) { return b.s - a.s; });
+      sims.slice(0, 6).forEach(function (o) { var tr = document.createElement("tr"); tr.innerHTML = "<td>" + o.w + "</td><td>" + o.s.toFixed(3) + "</td>"; tb.appendChild(tr); });
+      sims.slice(-2).forEach(function (o) { var tr = document.createElement("tr"); tr.style.color = "#9ca3af"; tr.innerHTML = "<td>" + o.w + "（最も遠い）</td><td>" + o.s.toFixed(3) + "</td>"; tb.appendChild(tr); });
+    }
+    $("st").textContent = "語彙 " + vocab.length + " 語 ／ エポック " + epoch;
+  }
+  $("btn-init").addEventListener("click", init);
+  $("btn-train").addEventListener("click", function () {
+    var L = 0; for (var i = 0; i < 50; i++) L = trainEpoch();
+    draw();
+    var q = $("qword").value, best = null;
+    if (idx[q] !== undefined) vocab.forEach(function (w, i) { if (w !== q) { var s = cos(E[idx[q]], E[i]); if (!best || s > best.s) best = { w: w, s: s }; } });
+    var rec = { dim: E[0].length, window: parseInt($("win").value, 10), lr: parseFloat($("lr").value), epoch: epoch, loss: +L.toFixed(4), query: q, nearest: best ? best.w : "", nearest_cos: best ? +best.s.toFixed(3) : "" };
+    records.push(rec); DL.log(5, "train", rec);
+  });
+  $("btn-analogy").addEventListener("click", function () {
+    var a = idx[$("aw").value], b = idx[$("bw").value], c = idx[$("cw").value];
+    var v = E[a].map(function (x, k) { return x - E[b][k] + E[c][k]; });
+    var best = vocab.map(function (w, i) { return { w: w, s: cos(v, E[i]) }; }).filter(function (o) { return [a, b, c].indexOf(idx[o.w]) < 0; }).sort(function (x, y) { return y.s - x.s; });
+    $("analogy").textContent = $("aw").value + " − " + $("bw").value + " + " + $("cw").value + " ≈ 「" + best[0].w + "」（類似度 " + best[0].s.toFixed(3) + "）、次点「" + best[1].w + "」";
+    DL.log(5, "analogy", { a: $("aw").value, b: $("bw").value, c: $("cw").value, result: best[0].w });
+  });
+  $("qword").addEventListener("change", draw);
+  ["dim", "win", "lr"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = id === "lr" ? parseFloat(this.value).toFixed(2) : this.value; }); });
+  $("dim").addEventListener("change", init);
+  DL.exportButtons("export5", function () { return records; }, ["dim", "window", "lr", "epoch", "loss", "query", "nearest", "nearest_cos"], "ch05_embedding", 5);
+  init();
+
+  DL.quiz("quiz5", 5, [
+    { q: "one-hot 表現の問題点は？", choices: ["長さが短すぎる", "どの単語同士も等距離で、意味の近さを表せない", "小数が使えない", "学習が速すぎる"], answer: 1 },
+    { q: "word2vec が「犬」と「猫」を近くに置ける理由は？", choices: ["辞書に書いてあるから", "文字の形が似ているから", "似た周辺単語（文脈）と一緒に現れるから", "出現回数が同じだから"], answer: 2, explain: "分布仮説：似た文脈に現れる単語は似た意味を持つ。" },
+    { q: "埋め込みの次元数 d を 2 → 300 に増やすと？", choices: ["表せる意味の違いが増えるが、2 次元には描けなくなる", "必ず精度が下がる", "語彙数が増える", "学習が不要になる"], answer: 0 }
+  ]);
+})();
+</script>
+</body>
+</html>

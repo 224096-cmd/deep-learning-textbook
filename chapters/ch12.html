@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第12章 BERT</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    <b>BERT（2018）</b>は Transformer の<b>エンコーダ</b>だけを使い、文の一部を <b>[MASK]</b> で隠して<b>穴埋め</b>をさせることで、
+    正解ラベルなしの大量の文章から言葉の使い方を学びます（<b>事前学習</b>）。穴の<b>左も右も両方</b>見て当てるので「双方向」。
+    学んだモデルは、少しの追加学習（<b>ファインチューニング</b>）で分類・質問応答などに使い回せます。
+  </div>
+  <p class="video-ref">動画の対応箇所：47:30〜「Transformer, BERT and GPT」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">マスク言語モデル（MLM）</span>：単語の 15% ほどを隠し、元の単語を当てる学習課題。</li>
+    <li><span class="term">双方向</span>：穴の左側の文脈と右側の文脈を同時に使うこと。GPT は左側だけ（第13章）。</li>
+    <li><span class="term">事前学習 → ファインチューニング</span>：まず大量の文で一般的な言葉の知識を学び、次に少量のラベル付きデータで目的の仕事に合わせる。</li>
+    <li><span class="term">[CLS]</span>：文の先頭に付ける特別な記号。その位置の出力を「文全体の要約」として分類に使う。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：穴埋めをやってみる（左だけ見る vs 両側を見る）</h2>
+  <p>本物の BERT は巨大ですが、ここでは「文章集の中で、前後にどんな単語が来やすいか」を数えるだけの小さなモデルで、<b>両側を見ることの効果</b>を体験します。文章集は書き換えても構いません。</p>
+  <textarea id="corpus"></textarea>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-build">文章集を読み込む</button>
+    <span class="status" id="st"></span>
+  </div>
+  <p>下の文の単語をクリックして [MASK] にすると、2 通りの方法で予測します。</p>
+  <div class="controls">
+    <label>文：<select id="pick"></select></label>
+  </div>
+  <div class="tokens" id="toks"></div>
+  <div class="canvas-row">
+    <div>
+      <p><b>左だけ見る（GPT 型）</b> ― 「直前の単語の次に来やすい単語」</p>
+      <div class="table-wrap"><table class="data" id="left"></table></div>
+    </div>
+    <div>
+      <p><b>両側を見る（BERT 型）</b> ― 「直前の次に来やすく、かつ直後の前に来やすい単語」</p>
+      <div class="table-wrap"><table class="data" id="both"></table></div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>体験②：全部の単語で穴埋めテスト</h2>
+  <p>文章集の全単語を 1 つずつ隠して当てさせ、正答率を比べます（1 位の予測が一致したら正解）。</p>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-eval">テスト実行</button>
+    <span class="status" id="evst"></span>
+  </div>
+  <canvas id="evc" width="520" height="90"></canvas>
+  <div class="table-wrap"><table class="data" id="evtbl"><tr><th>#</th><th>文数</th><th>語彙</th><th>テスト単語数</th><th>左だけ 正答率</th><th>両側 正答率</th></tr></table></div>
+  <div id="export12"></div>
+  <div class="note"><b>試してみよう</b>：文章集に自分の文を 10 行ほど足して再テストすると、正答率はどう変わりますか？ 「両側」が「左だけ」に負ける例はありますか（例：文末の単語）？</div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz12"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(12);
+  var $ = DL.$;
+  $("corpus").value = [
+    "私 は 朝 に パン を 食べる", "私 は 朝 に ご飯 を 食べる", "彼 は 夜 に ラーメン を 食べる", "彼女 は 昼 に うどん を 食べる",
+    "私 は 毎日 コーヒー を 飲む", "彼 は 毎日 紅茶 を 飲む", "彼女 は 朝 に 牛乳 を 飲む", "私 は 夜 に 水 を 飲む",
+    "犬 が 庭 で 走る", "猫 が 庭 で 寝る", "鳥 が 空 を 飛ぶ", "魚 が 川 を 泳ぐ", "子ども が 公園 で 遊ぶ",
+    "私 は 学校 で 数学 を 学ぶ", "彼 は 学校 で 英語 を 学ぶ", "彼女 は 家 で 本 を 読む", "私 は 図書館 で 本 を 読む",
+    "先生 が 教室 で 授業 を する", "生徒 が 教室 で 質問 を する", "私 は 駅 で 電車 を 待つ", "彼 は 駅 で バス を 待つ",
+    "今日 は 天気 が 良い", "明日 は 天気 が 悪い", "今日 は 気温 が 高い", "明日 は 気温 が 低い",
+    "私 は 友達 と 映画 を 見る", "彼 は 家族 と 旅行 に 行く", "彼女 は 友達 と 買い物 に 行く", "私 は 一人 で 音楽 を 聴く"
+  ].join("\n");
+
+  var sents = [], vocab = [], uni = {}, big = {}, big2 = {}, maskPos = 2, records = [];
+  function build() {
+    sents = []; vocab = []; uni = {}; big = {}; big2 = {};
+    $("corpus").value.split(/\n/).forEach(function (line) {
+      var w = line.trim().split(/\s+/).filter(Boolean); if (!w.length) return;
+      var s = ["<S>"].concat(w, ["</S>"]); sents.push(s);
+      s.forEach(function (x, i) {
+        uni[x] = (uni[x] || 0) + 1;
+        if (i > 0) { big[s[i - 1]] = big[s[i - 1]] || {}; big[s[i - 1]][x] = (big[s[i - 1]][x] || 0) + 1; }
+      });
+    });
+    Object.keys(uni).forEach(function (w) { if (w !== "<S>" && w !== "</S>") vocab.push(w); });
+    var p = $("pick"); p.innerHTML = ""; sents.forEach(function (s, i) { p.appendChild(DL.el("option", { value: i, text: s.slice(1, -1).join(" ") })); });
+    $("st").textContent = sents.length + " 文、語彙 " + vocab.length + " 語";
+    maskPos = 2; render();
+  }
+  function P(prev, w) { var c = big[prev] ? (big[prev][w] || 0) : 0; return (c + 0.01) / ((uni[prev] || 0) + 0.01 * vocab.length); }
+  function predictLeft(prev) { return vocab.map(function (w) { return { w: w, s: P(prev, w) }; }).sort(function (a, b) { return b.s - a.s; }); }
+  function predictBoth(prev, next) { return vocab.map(function (w) { return { w: w, s: P(prev, w) * P(w, next) }; }).sort(function (a, b) { return b.s - a.s; }); }
+  function fill(tbl, list, truth) {
+    tbl.innerHTML = "<tr><th>順位</th><th>予測</th><th>スコア</th></tr>";
+    var tot = list.reduce(function (a, b) { return a + b.s; }, 0);
+    list.slice(0, 5).forEach(function (o, i) { var tr = document.createElement("tr"); if (o.w === truth) tr.style.background = "#dcfce7"; tr.innerHTML = "<td>" + (i + 1) + "</td><td>" + o.w + (o.w === truth ? " ✓" : "") + "</td><td>" + (o.s / tot * 100).toFixed(1) + "%</td>"; tbl.appendChild(tr); });
+  }
+  function render() {
+    var s = sents[+$("pick").value]; if (!s) return;
+    var c = $("toks"); c.innerHTML = "";
+    s.slice(1, -1).forEach(function (w, i) {
+      var idx = i + 1, t = DL.el("div", { class: "token" + (idx === maskPos ? " mask" : ""), text: idx === maskPos ? "[MASK]" : w });
+      t.addEventListener("click", function () { maskPos = idx; render(); DL.log(12, "mask", { word: w }); });
+      c.appendChild(t);
+    });
+    fill($("left"), predictLeft(s[maskPos - 1]), s[maskPos]);
+    fill($("both"), predictBoth(s[maskPos - 1], s[maskPos + 1]), s[maskPos]);
+  }
+  $("btn-build").addEventListener("click", build);
+  $("pick").addEventListener("change", function () { maskPos = 1; render(); });
+  $("btn-eval").addEventListener("click", function () {
+    var n = 0, cl = 0, cb = 0;
+    sents.forEach(function (s) { for (var i = 1; i < s.length - 1; i++) { n++; if (predictLeft(s[i - 1])[0].w === s[i]) cl++; if (predictBoth(s[i - 1], s[i + 1])[0].w === s[i]) cb++; } });
+    var rec = { run: records.length + 1, sentences: sents.length, vocab: vocab.length, tested: n, left_only_acc: +(cl / n).toFixed(4), both_sides_acc: +(cb / n).toFixed(4) };
+    records.push(rec); DL.log(12, "eval", rec);
+    DL.barChart($("evc"), [{ label: "左だけ（GPT 型）", value: cl / n, color: "#dc2626" }, { label: "両側（BERT 型）", value: cb / n, color: "#2563eb" }], { vmax: 1, left: 130, format: function (v) { return (v * 100).toFixed(1) + "%"; } });
+    var tr = document.createElement("tr"); tr.innerHTML = "<td>" + rec.run + "</td><td>" + rec.sentences + "</td><td>" + rec.vocab + "</td><td>" + rec.tested + "</td><td>" + (rec.left_only_acc * 100).toFixed(1) + "%</td><td>" + (rec.both_sides_acc * 100).toFixed(1) + "%</td>"; $("evtbl").appendChild(tr);
+    $("evst").textContent = "テスト " + n + " 語：左だけ " + (cl / n * 100).toFixed(1) + "%、両側 " + (cb / n * 100).toFixed(1) + "%";
+  });
+  DL.exportButtons("export12", function () { return records; }, ["run", "sentences", "vocab", "tested", "left_only_acc", "both_sides_acc"], "ch12_bert_mlm", 12);
+  build();
+
+  DL.quiz("quiz12", 12, [
+    { q: "BERT の事前学習課題は？", choices: ["次の単語を当てる", "隠した単語を前後の文脈から当てる（穴埋め）", "翻訳する", "画像を分類する"], answer: 1 },
+    { q: "BERT が「双方向」と呼ばれる理由は？", choices: ["2 つのモデルを使うから", "穴の左右両方の文脈を同時に使って予測するから", "文を 2 回読むから", "英語と日本語を扱うから"], answer: 1 },
+    { q: "事前学習済みモデルを目的の仕事に合わせる追加学習を何という？", choices: ["ファインチューニング", "プーリング", "正規化", "埋め込み"], answer: 0 }
+  ]);
+})();
+</script>
+</body>
+</html>

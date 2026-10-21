@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第8章 GRU</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    <b>GRU（ゲート付き回帰ユニット、2014）</b>は LSTM を簡略化したものです。記憶セル c と隠れ状態 h を 1 つにまとめ、ゲートも 3 つ → 2 つに減らしました。
+    パラメータが少ないぶん計算が軽く、多くの課題で LSTM と同程度の性能が出ます。
+  </div>
+  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
+  <div class="code">z = σ(…)   更新ゲート：新しい情報にどれだけ置き換えるか（0=前の状態を保つ、1=全部置き換え）
+r = σ(…)   リセットゲート：候補を作るときに過去をどれだけ参照するか
+n = tanh( Wx·x + Wh·(r * h_{t-1}) + b )   候補
+h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量」が 1 つのゲートで連動</div>
+  <h3>LSTM との違い</h3>
+  <div class="table-wrap">
+  <table class="data">
+    <tr><th></th><th>RNN</th><th>LSTM</th><th>GRU</th></tr>
+    <tr><td>状態</td><td>h</td><td>h と c（2 つ）</td><td>h（1 つ）</td></tr>
+    <tr><td>ゲート数</td><td>0</td><td>3（忘却・入力・出力）</td><td>2（更新・リセット）</td></tr>
+    <tr><td>忘れる量と書く量</td><td>—</td><td>別々に決める（f と i）</td><td>連動（1−z と z）</td></tr>
+    <tr><td>パラメータ数（隠れ H、入力 X）</td><td>H(H+X+1)</td><td>4·H(H+X+1)</td><td>3·H(H+X+1)</td></tr>
+  </table></div>
+</section>
+
+<section class="card">
+  <h2>体験①：更新ゲートを手で動かす</h2>
+  <div class="controls">
+    <label>更新ゲート z <input type="range" id="gz" min="0" max="1" step="0.05" value="0"> <span class="val" id="gzv">0.00</span></label>
+    <label>候補 n <input type="range" id="gn" min="-1" max="1" step="0.1" value="0.8"> <span class="val" id="gnv">0.8</span></label>
+    <button class="btn btn-small" id="btn-step">1 ステップ進める</button>
+    <button class="btn btn-small" id="btn-write">書き込む（z=1）</button>
+    <button class="btn btn-small" id="btn-keep">保つ（z=0）</button>
+    <button class="btn btn-small btn-outline" id="btn-clear">リセット</button>
+  </div>
+  <canvas id="cell" width="820" height="200"></canvas>
+  <p class="canvas-caption">h_t = (1−z)·h_{t−1} + z·n。z=0 なら前の状態がそのまま残る（LSTM の f=1, i=0 と同じ働き）。</p>
+  <div id="export8a"></div>
+</section>
+
+<section class="card">
+  <h2>体験②：パラメータ数の比較</h2>
+  <div class="controls">
+    <label>隠れ状態の大きさ H <input type="range" id="pH" min="8" max="512" step="8" value="128"> <span class="val" id="pHv">128</span></label>
+    <label>入力の次元 X <input type="range" id="pX" min="2" max="512" step="2" value="100"> <span class="val" id="pXv">100</span></label>
+  </div>
+  <canvas id="params" width="520" height="110"></canvas>
+</section>
+
+<section class="card">
+  <h2>体験③：学習レース RNN vs LSTM vs GRU</h2>
+  <div id="race"></div>
+  <div class="note"><b>試してみよう</b>：T=30 で 3 つを比べ、「解けるまでのステップ数」と「パラメータ数」を表に記録しましょう。GRU は LSTM より少ない重みで、どの程度ついていけますか？ T=50 ではどうですか？</div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz8"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/seq.js"></script>
+<script src="../assets/js/seqwidget.js"></script>
+<script>
+(function () {
+  DL.nav(8);
+  var $ = DL.$;
+  var hist = [], h = 0;
+  function step(z, n) { h = (1 - z) * h + z * n; hist.push({ t: hist.length + 1, z: z, n: n, h: +h.toFixed(3) }); draw(); }
+  function draw() { DL.lineChart($("cell"), [{ name: "隠れ状態 h", values: hist.map(function (r) { return r.h; }), color: "#16a34a" }], { xLabel: "ステップ", yLabel: "値", yMin: -1.2, yMax: 1.2 }); }
+  ["gz", "gn"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); }); });
+  $("btn-step").addEventListener("click", function () { step(+$("gz").value, +$("gn").value); });
+  $("btn-write").addEventListener("click", function () { step(1, +$("gn").value); });
+  $("btn-keep").addEventListener("click", function () { step(0, +$("gn").value); });
+  $("btn-clear").addEventListener("click", function () { hist = []; h = 0; draw(); });
+  DL.exportButtons("export8a", function () { return hist; }, ["t", "z", "n", "h"], "ch08_gru_cell", 8);
+  draw();
+
+  function params() {
+    var H = +$("pH").value, X = +$("pX").value; $("pHv").textContent = H; $("pXv").textContent = X;
+    var base = H * (H + X + 1);
+    DL.barChart($("params"), [{ label: "RNN", value: base, color: "#dc2626" }, { label: "GRU", value: 3 * base, color: "#16a34a" }, { label: "LSTM", value: 4 * base, color: "#2563eb" }], { left: 60, format: function (v) { return v.toLocaleString(); } });
+  }
+  $("pH").addEventListener("input", params); $("pX").addEventListener("input", params); params();
+
+  SEQ.race("race", 8, { types: ["rnn", "lstm", "gru"], T: 30, H: 8, lr: 0.01, steps: 1500 });
+
+  DL.quiz("quiz8", 8, [
+    { q: "GRU のゲートの数は？", choices: ["1", "2", "3", "4"], answer: 1, explain: "更新ゲート z とリセットゲート r。" },
+    { q: "GRU で更新ゲート z が 0 に近いと？", choices: ["隠れ状態が候補 n に置き換わる", "前の隠れ状態がそのまま保たれる", "隠れ状態が 0 になる", "リセットゲートが無効になる"], answer: 1 },
+    { q: "同じ隠れサイズのとき、GRU のパラメータ数は LSTM の約何倍？", choices: ["1/2", "3/4", "同じ", "2 倍"], answer: 1, explain: "ゲート 3 個分 vs 4 個分なので 3/4。" }
+  ]);
+})();
+</script>
+</body>
+</html>

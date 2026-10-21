@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第9章 Seq2Seq</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    翻訳のように「系列を入れて、<b>長さの違う系列を出す</b>」には、RNN を 2 つつなぎます。
+    <b>エンコーダ</b>が入力文を読んで 1 本のベクトル（<b>文脈ベクトル</b>）に圧縮し、<b>デコーダ</b>がそれを受け取って 1 語ずつ出力します。これが <b>Seq2Seq（2014）</b>。
+    弱点は、文が長くなるほど<b>1 本の固定長ベクトルに全部を詰め込みきれない</b>こと（ボトルネック）。次章の Attention がこれを解決します。
+  </div>
+  <p class="video-ref">動画の対応箇所：39:30〜「Seq2Seq and Attention」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">エンコーダ／デコーダ</span>：読む側の RNN／書く側の RNN。</li>
+    <li><span class="term">文脈ベクトル</span>：エンコーダの最後の隠れ状態。入力文全体の要約。</li>
+    <li><span class="term">自己回帰</span>：デコーダが「自分が直前に出した単語」を次の入力にして 1 語ずつ生成すること。</li>
+    <li><span class="term">教師強制（teacher forcing）</span>：学習時は、直前の出力の代わりに正解の単語をデコーダに入れて学習を安定させる方法。</li>
+    <li><span class="term">&lt;BOS&gt; / &lt;EOS&gt;</span>：文の始まり／終わりを表す特別な記号。デコーダは &lt;EOS&gt; を出したら生成を止める。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：エンコーダ → 文脈ベクトル → デコーダ の流れを見る</h2>
+  <div class="controls">
+    <label>入力文（英語）：<select id="sent">
+      <option value="0">I like cats</option>
+      <option value="1">She reads a book</option>
+      <option value="2">We eat bread every morning</option>
+    </select></label>
+    <button class="btn btn-small" id="btn-play">アニメーション再生</button>
+  </div>
+  <canvas id="s2s" width="860" height="300"></canvas>
+  <p class="canvas-caption">左：エンコーダが単語を 1 つずつ読み、隠れ状態（小さな棒グラフ）を更新。中央：最後の隠れ状態＝文脈ベクトル。右：デコーダが &lt;BOS&gt; から 1 語ずつ日本語を出す。（翻訳結果はデモ用に用意したもの）</p>
+</section>
+
+<section class="card">
+  <h2>体験②：固定長ベクトルにどれだけ詰め込めるか（ボトルネック実験）</h2>
+  <p>
+    「位置 p に単語 w がある」という情報を、ベクトル（長さ d）1 本に<b>足し算で重ねて</b>記憶し、あとで各位置の単語を取り出せるか試します。
+    実際の Seq2Seq も、文脈ベクトル 1 本に文全体を押し込んでいる点は同じです。
+  </p>
+  <div class="controls">
+    <label>ベクトルの長さ d <input type="range" id="d" min="8" max="256" step="8" value="64"> <span class="val" id="dv">64</span></label>
+    <label>語彙数 V <input type="range" id="V" min="10" max="200" step="10" value="50"> <span class="val" id="Vv">50</span></label>
+    <label>試行回数 <input type="number" id="trials" value="20" min="5" max="100" style="width:70px"></label>
+    <button class="btn btn-small" id="btn-run">文の長さ 1〜40 で実験</button>
+    <span class="status" id="st"></span>
+  </div>
+  <canvas id="bottle" width="860" height="260"></canvas>
+  <p class="canvas-caption">横軸＝文の長さ N、縦軸＝正しく取り出せた単語の割合。d を大きくすると長い文まで耐えられるが、必ずどこかで崩れる。</p>
+  <div id="export9"></div>
+  <div class="note"><b>試してみよう</b>：d=32 と d=256 で、正答率が 90% を切る N を比べてください。d を 8 倍にしても、覚えられる長さは 8 倍にはなりません。これが「長文で翻訳品質が落ちる」原因のモデルです。</div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz9"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(9);
+  var $ = DL.$;
+  var rng = new DL.RNG(99);
+  var SENTS = [
+    { en: ["I", "like", "cats"], ja: ["私は", "猫が", "好き", "<EOS>"] },
+    { en: ["She", "reads", "a", "book"], ja: ["彼女は", "本を", "読む", "<EOS>"] },
+    { en: ["We", "eat", "bread", "every", "morning"], ja: ["私たちは", "毎朝", "パンを", "食べる", "<EOS>"] }
+  ];
+  var cv = $("s2s"), ctx = cv.getContext("2d"), D = 6;
+  function fakeState(seed, t) { var r = new DL.RNG(seed * 31 + t * 7 + 1); var v = []; for (var k = 0; k < D; k++) v.push(Math.tanh(r.gauss())); return v; }
+  function bars(x, y, v, color) {
+    for (var k = 0; k < D; k++) { var h = v[k] * 22; ctx.fillStyle = color; ctx.fillRect(x + k * 8, y - Math.max(0, h), 6, Math.abs(h)); }
+    ctx.strokeStyle = "#9ca3af"; ctx.beginPath(); ctx.moveTo(x - 2, y); ctx.lineTo(x + D * 8, y); ctx.stroke();
+  }
+  function drawFrame(si, encStep, decStep) {
+    var s = SENTS[si]; ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.font = "13px sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#374151";
+    ctx.fillText("エンコーダ（読む）", 170, 20); ctx.fillText("文脈ベクトル", 430, 20); ctx.fillText("デコーダ（書く）", 690, 20);
+    var ex = 40, gap = 62;
+    s.en.forEach(function (w, i) {
+      var x = ex + i * gap, on = i <= encStep;
+      ctx.fillStyle = on ? "#1f2430" : "#d1d5db"; ctx.fillText(w, x + 24, 260);
+      ctx.strokeStyle = on ? "#2563eb" : "#e5e7eb"; ctx.strokeRect(x, 120, 50, 70);
+      if (on) bars(x + 2, 170, fakeState(si, i), "#2563eb");
+      ctx.beginPath(); ctx.moveTo(x + 24, 245); ctx.lineTo(x + 24, 195); ctx.stroke();
+      if (i > 0) { ctx.beginPath(); ctx.moveTo(x - gap + 50, 155); ctx.lineTo(x, 155); ctx.stroke(); }
+    });
+    var ctxOn = encStep >= s.en.length - 1;
+    ctx.strokeStyle = ctxOn ? "#d97706" : "#e5e7eb"; ctx.lineWidth = 3; ctx.strokeRect(400, 110, 70, 90); ctx.lineWidth = 1;
+    if (ctxOn) { bars(410, 170, fakeState(si, s.en.length - 1), "#d97706"); ctx.fillStyle = "#92400e"; ctx.fillText("文全体の要約", 435, 225); }
+    ctx.strokeStyle = ctxOn ? "#d97706" : "#e5e7eb"; ctx.beginPath(); ctx.moveTo(ex + (s.en.length - 1) * gap + 50, 155); ctx.lineTo(400, 155); ctx.stroke();
+    var dx = 520;
+    ["<BOS>"].concat(s.ja).forEach(function (w, j) {
+      if (j >= s.ja.length) return;
+      var x = dx + j * 80, on = j <= decStep;
+      ctx.strokeStyle = on ? "#16a34a" : "#e5e7eb"; ctx.strokeRect(x, 120, 50, 70);
+      if (on) bars(x + 2, 170, fakeState(si + 10, j), "#16a34a");
+      ctx.fillStyle = on ? "#1f2430" : "#d1d5db"; ctx.fillText(j === 0 ? "<BOS>" : s.ja[j - 1], x + 25, 260);
+      if (on) { ctx.fillStyle = "#15803d"; ctx.fillText(s.ja[j], x + 25, 100); ctx.beginPath(); ctx.moveTo(x + 25, 118); ctx.lineTo(x + 25, 108); ctx.stroke(); }
+      if (j === 0) { ctx.strokeStyle = on ? "#d97706" : "#e5e7eb"; ctx.beginPath(); ctx.moveTo(470, 155); ctx.lineTo(x, 155); ctx.stroke(); }
+      else { ctx.strokeStyle = on ? "#16a34a" : "#e5e7eb"; ctx.beginPath(); ctx.moveTo(x - 30, 155); ctx.lineTo(x, 155); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - 55, 108); ctx.lineTo(x - 55, 70); ctx.lineTo(x + 25, 70); ctx.lineTo(x + 25, 245); ctx.stroke(); }
+    });
+    ctx.fillStyle = "#6b7280"; ctx.fillText("出した単語を次の入力へ（自己回帰）", 690, 290);
+  }
+  $("btn-play").addEventListener("click", function () {
+    var si = +$("sent").value, s = SENTS[si], e = -1, d = -1, btn = this; btn.disabled = true;
+    var t = setInterval(function () {
+      if (e < s.en.length - 1) e++; else d++;
+      drawFrame(si, e, d);
+      if (d >= s.ja.length - 1) { clearInterval(t); btn.disabled = false; DL.log(9, "animate", { sentence: s.en.join(" ") }); }
+    }, 550);
+  });
+  $("sent").addEventListener("change", function () { drawFrame(+this.value, -1, -1); });
+  drawFrame(0, -1, -1);
+
+  // --- ボトルネック実験 ---
+  var records = [];
+  $("d").addEventListener("input", function () { $("dv").textContent = this.value; });
+  $("V").addEventListener("input", function () { $("Vv").textContent = this.value; });
+  function key(p, w, d, seed) { var r = new DL.RNG(seed + p * 100003 + w * 7919); var v = new Array(d); for (var k = 0; k < d; k++) v[k] = r.gauss() / Math.sqrt(d); return v; }
+  $("btn-run").addEventListener("click", function () {
+    var d = +$("d").value, V = +$("V").value, trials = +$("trials").value, accs = [], btn = this; btn.disabled = true;
+    var N = 1;
+    var t = setInterval(function () {
+      var correct = 0, total = 0;
+      for (var tr = 0; tr < trials; tr++) {
+        var seed = rng.int(1e6), words = [], ctxv = new Array(d).fill(0);
+        for (var p = 0; p < N; p++) { var w = rng.int(V); words.push(w); var kv = key(p, w, d, seed); for (var k = 0; k < d; k++) ctxv[k] += kv[k]; }
+        for (p = 0; p < N; p++) {
+          var best = -1, bs = -Infinity;
+          for (var cand = 0; cand < V; cand++) { var sc = DL.dot(ctxv, key(p, cand, d, seed)); if (sc > bs) { bs = sc; best = cand; } }
+          if (best === words[p]) correct++; total++;
+        }
+      }
+      accs.push(correct / total);
+      DL.lineChart($("bottle"), [{ name: "取り出し正答率 (d=" + d + ")", values: accs }], { yMin: 0, yMax: 1, xLabel: "文の長さ N − 1", yLabel: "正答率" });
+      $("st").textContent = "N=" + N + " 正答率 " + (correct / total).toFixed(3);
+      records.push({ d: d, V: V, N: N, accuracy: +(correct / total).toFixed(4) });
+      N++;
+      if (N > 40) { clearInterval(t); btn.disabled = false; DL.log(9, "bottleneck", { d: d, V: V, acc_at_10: accs[9], acc_at_40: accs[39] }); }
+    }, 10);
+  });
+  DL.exportButtons("export9", function () { return records; }, ["d", "V", "N", "accuracy"], "ch09_bottleneck", 9);
+
+  DL.quiz("quiz9", 9, [
+    { q: "Seq2Seq の文脈ベクトルとは？", choices: ["入力文の最初の単語", "エンコーダの最後の隠れ状態（入力文全体の要約）", "デコーダの出力", "辞書"], answer: 1 },
+    { q: "Seq2Seq の弱点は？", choices: ["短い文を訳せない", "長い文の情報を固定長ベクトル 1 本に詰め込みきれない", "単語埋め込みが使えない", "学習に正解データが要らない"], answer: 1 },
+    { q: "デコーダが「自己回帰」とは？", choices: ["直前に出した単語を次の入力として 1 語ずつ生成する", "入力文を逆順に読む", "エンコーダと同じ重みを使う", "全単語を一度に出す"], answer: 0 }
+  ]);
+})();
+</script>
+</body>
+</html>

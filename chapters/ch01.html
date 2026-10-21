@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第1章 パーセプトロン</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    <b>パーセプトロン</b>（1958年）は「入力に重みを掛けて足し、しきい値を超えたら 1、超えなければ 0」を出すだけの、最も単純なニューロンのモデルです。
+    この章では、点を 2 色に分ける問題を使って、<b>重みを少しずつ直して直線を動かす</b>学習の様子を見ます。
+  </div>
+  <p class="video-ref">動画の対応箇所：01:08〜「Perceptron and MLP」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">重み（weight, w）</span>：各入力をどれだけ重視するかを表す数。学習で変わる。</li>
+    <li><span class="term">バイアス（bias, b）</span>：しきい値を動かすための「下駄」。これも学習で変わる。</li>
+    <li><span class="term">決定境界</span>：出力が 0 と 1 で切り替わる線。2 入力なら <span class="mono">w1·x1 + w2·x2 + b = 0</span> の直線。</li>
+    <li><span class="term">エポック</span>：訓練データを 1 周すること。</li>
+  </ul>
+  <div class="code">// パーセプトロンの計算（1 個のニューロン）
+z = w1*x1 + w2*x2 + b
+y = (z &gt; 0) ? 1 : 0
+// 学習則：間違えたときだけ重みを直す
+w ← w + 学習率 × (正解 − 出力) × 入力</div>
+</section>
+
+<section class="card">
+  <h2>体験①：学習の様子を見る</h2>
+  <div class="controls">
+    <label>問題：
+      <select id="dataset">
+        <option value="and">AND（論理積）</option>
+        <option value="or">OR（論理和）</option>
+        <option value="blobs" selected>2 つのかたまり</option>
+        <option value="xor">XOR（排他的論理和）※解けない</option>
+      </select>
+    </label>
+    <label>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.2"> <span class="val" id="lrv">0.20</span></label>
+    <button class="btn btn-small" id="btn-reset">重みをリセット</button>
+    <button class="btn btn-small" id="btn-step">1 サンプル学習</button>
+    <button class="btn btn-small" id="btn-epoch">1 エポック学習</button>
+    <button class="btn btn-small" id="btn-auto">自動（20 エポック）</button>
+  </div>
+  <div class="canvas-row">
+    <div>
+      <canvas id="plane" width="420" height="420"></canvas>
+      <p class="canvas-caption">点をクリックすると、そこに新しい点を追加できます（Shift を押しながらで赤）。背景色は現在の出力（青＝1、赤＝0）、黒線が決定境界。</p>
+    </div>
+    <div>
+      <canvas id="acc" width="420" height="220"></canvas>
+      <p class="canvas-caption">エポックごとの正答率</p>
+      <table class="data">
+        <tr><th>w1</th><th>w2</th><th>b</th><th>エポック</th><th>正答率</th></tr>
+        <tr><td id="w1">-</td><td id="w2">-</td><td id="b">-</td><td id="ep">0</td><td id="accv">-</td></tr>
+      </table>
+      <div id="export1"></div>
+    </div>
+  </div>
+  <div class="note">
+    <b>試してみよう</b>：XOR を選んで自動学習すると、何エポック回しても正答率が 100% になりません。
+    理由は、XOR の青と赤を<b>1 本の直線</b>では分けられないから。これが 1969 年にパーセプトロン研究が止まった理由であり、次章の MLP が生まれた動機です。
+  </div>
+</section>
+
+<section class="card">
+  <h2>体験②：手で重みを動かす</h2>
+  <div class="controls">
+    <label>w1 <input type="range" id="mw1" min="-3" max="3" step="0.05" value="1"></label>
+    <label>w2 <input type="range" id="mw2" min="-3" max="3" step="0.05" value="1"></label>
+    <label>b <input type="range" id="mb" min="-3" max="3" step="0.05" value="-0.5"></label>
+    <span class="status" id="manual-status"></span>
+  </div>
+  <p class="muted">スライダーを動かすと体験①の直線が直接動きます。学習とは「このスライダーをデータに合わせて自動で調整すること」です。</p>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz1"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(1);
+  var $ = DL.$;
+  var rng = new DL.RNG(7);
+  var pts = [], w = [0, 0], b = 0, epoch = 0, accHist = [], records = [];
+  var cursor = 0;
+
+  function makeData(kind) {
+    pts = []; cursor = 0;
+    if (kind === "and" || kind === "or" || kind === "xor") {
+      [[0, 0], [0, 1], [1, 0], [1, 1]].forEach(function (p) {
+        var y = kind === "and" ? (p[0] && p[1] ? 1 : 0) : kind === "or" ? (p[0] || p[1] ? 1 : 0) : (p[0] ^ p[1]);
+        for (var k = 0; k < 6; k++) pts.push({ x: p[0] * 1.4 - 0.7 + rng.gauss() * 0.08, y: p[1] * 1.4 - 0.7 + rng.gauss() * 0.08, t: y });
+      });
+    } else {
+      for (var i = 0; i < 40; i++) {
+        var c = i % 2;
+        pts.push({ x: (c ? 0.45 : -0.45) + rng.gauss() * 0.25, y: (c ? 0.35 : -0.35) + rng.gauss() * 0.25, t: c });
+      }
+    }
+  }
+  function resetW() {
+    w = [rng.gauss() * 0.3, rng.gauss() * 0.3]; b = rng.gauss() * 0.3; epoch = 0; accHist = []; records = [];
+    syncSliders();
+  }
+  function predict(p) { return (w[0] * p.x + w[1] * p.y + b) > 0 ? 1 : 0; }
+  function accuracy() {
+    var c = 0; pts.forEach(function (p) { if (predict(p) === p.t) c++; });
+    return pts.length ? c / pts.length : 0;
+  }
+  function learnOne() {
+    var lr = parseFloat($("lr").value);
+    var p = pts[cursor % pts.length]; cursor++;
+    var err = p.t - predict(p);
+    if (err !== 0) { w[0] += lr * err * p.x; w[1] += lr * err * p.y; b += lr * err; }
+    if (cursor % pts.length === 0) endEpoch();
+  }
+  function endEpoch() {
+    epoch++;
+    var a = accuracy(); accHist.push(a);
+    records.push({ dataset: $("dataset").value, epoch: epoch, w1: +w[0].toFixed(4), w2: +w[1].toFixed(4), b: +b.toFixed(4), accuracy: +a.toFixed(4) });
+  }
+  function learnEpoch() {
+    // 現在のエポックを最後まで
+    var n = pts.length - (cursor % pts.length);
+    for (var i = 0; i < n; i++) learnOne();
+  }
+
+  var cv = $("plane"), ctx = cv.getContext("2d");
+  function toPx(x) { return (x + 1) / 2 * cv.width; }
+  function toPy(y) { return (1 - (y + 1) / 2) * cv.height; }
+  function draw() {
+    // 背景（出力領域）
+    var img = ctx.createImageData(cv.width, cv.height);
+    var step = 4;
+    for (var py = 0; py < cv.height; py += step) {
+      for (var px = 0; px < cv.width; px += step) {
+        var x = px / cv.width * 2 - 1, y = 1 - py / cv.height * 2;
+        var out = (w[0] * x + w[1] * y + b) > 0;
+        for (var dy = 0; dy < step; dy++) for (var dx = 0; dx < step; dx++) {
+          var i = ((py + dy) * cv.width + (px + dx)) * 4;
+          img.data[i] = out ? 219 : 254; img.data[i + 1] = out ? 234 : 226; img.data[i + 2] = out ? 254 : 226; img.data[i + 3] = 255;
+        }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    // 軸
+    ctx.strokeStyle = "#d1d5db"; ctx.beginPath(); ctx.moveTo(toPx(0), 0); ctx.lineTo(toPx(0), cv.height); ctx.moveTo(0, toPy(0)); ctx.lineTo(cv.width, toPy(0)); ctx.stroke();
+    // 境界線 w1 x + w2 y + b = 0
+    ctx.strokeStyle = "#111827"; ctx.lineWidth = 2; ctx.beginPath();
+    if (Math.abs(w[1]) > 1e-6) { ctx.moveTo(toPx(-1), toPy((-b + w[0]) / w[1])); ctx.lineTo(toPx(1), toPy((-b - w[0]) / w[1])); }
+    else if (Math.abs(w[0]) > 1e-6) { ctx.moveTo(toPx(-b / w[0]), 0); ctx.lineTo(toPx(-b / w[0]), cv.height); }
+    ctx.stroke(); ctx.lineWidth = 1;
+    // 点
+    pts.forEach(function (p, i) {
+      ctx.beginPath(); ctx.arc(toPx(p.x), toPy(p.y), 6, 0, Math.PI * 2);
+      ctx.fillStyle = p.t ? "#2563eb" : "#dc2626"; ctx.fill();
+      ctx.strokeStyle = predict(p) === p.t ? "#fff" : "#000"; ctx.lineWidth = predict(p) === p.t ? 1 : 2; ctx.stroke();
+      if (i === cursor % pts.length) { ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(toPx(p.x), toPy(p.y), 10, 0, Math.PI * 2); ctx.stroke(); }
+    });
+    ctx.lineWidth = 1;
+    // 表
+    $("w1").textContent = w[0].toFixed(3); $("w2").textContent = w[1].toFixed(3); $("b").textContent = b.toFixed(3);
+    $("ep").textContent = epoch; $("accv").textContent = (accuracy() * 100).toFixed(1) + "%";
+    DL.lineChart($("acc"), [{ name: "正答率", values: accHist }], { yMin: 0, yMax: 1, xLabel: "エポック", yLabel: "正答率" });
+  }
+  function syncSliders() { $("mw1").value = w[0]; $("mw2").value = w[1]; $("mb").value = b; }
+
+  cv.addEventListener("click", function (e) {
+    var r = cv.getBoundingClientRect();
+    var x = (e.clientX - r.left) / r.width * 2 - 1, y = 1 - (e.clientY - r.top) / r.height * 2;
+    pts.push({ x: x, y: y, t: e.shiftKey ? 0 : 1 });
+    DL.log(1, "add_point", { x: x, y: y, t: e.shiftKey ? 0 : 1 });
+    draw();
+  });
+  $("dataset").addEventListener("change", function () { makeData(this.value); resetW(); draw(); DL.log(1, "dataset", { dataset: this.value }); });
+  $("lr").addEventListener("input", function () { $("lrv").textContent = parseFloat(this.value).toFixed(2); });
+  $("btn-reset").addEventListener("click", function () { resetW(); draw(); });
+  $("btn-step").addEventListener("click", function () { learnOne(); syncSliders(); draw(); });
+  $("btn-epoch").addEventListener("click", function () { learnEpoch(); syncSliders(); draw(); DL.log(1, "epoch", { epoch: epoch, accuracy: accuracy() }); });
+  $("btn-auto").addEventListener("click", function () {
+    var btn = this, k = 0; btn.disabled = true;
+    var t = setInterval(function () {
+      learnEpoch(); syncSliders(); draw(); k++;
+      if (k >= 20 || accuracy() === 1) { clearInterval(t); btn.disabled = false; DL.log(1, "auto_train", { dataset: $("dataset").value, epochs: epoch, accuracy: accuracy() }); }
+    }, 120);
+  });
+  ["mw1", "mw2", "mb"].forEach(function (id) {
+    $(id).addEventListener("input", function () {
+      w[0] = parseFloat($("mw1").value); w[1] = parseFloat($("mw2").value); b = parseFloat($("mb").value);
+      $("manual-status").textContent = "正答率 " + (accuracy() * 100).toFixed(1) + "%";
+      draw();
+    });
+  });
+  DL.exportButtons("export1", function () { return records; }, ["dataset", "epoch", "w1", "w2", "b", "accuracy"], "ch01_perceptron", 1);
+
+  makeData("blobs"); resetW(); draw();
+
+  DL.quiz("quiz1", 1, [
+    { q: "パーセプトロンの出力を決めるのは次のうちどれ？", choices: ["入力の平均", "重み付き和がしきい値を超えたかどうか", "入力の最大値", "入力の個数"], answer: 1, explain: "z = Σ w·x + b を計算し、0 より大きいかで 0/1 を決めます。" },
+    { q: "パーセプトロンが XOR を学習できない理由は？", choices: ["データが少なすぎる", "学習率が小さすぎる", "1 本の直線では 2 色を分けられない", "エポック数が足りない"], answer: 2, explain: "線形分離不可能な問題は、どんなに学習しても直線 1 本では解けません。" },
+    { q: "学習則で重みが更新されるのはどんなとき？", choices: ["毎回必ず", "予測を間違えたときだけ", "正解したときだけ", "エポックの最後だけ"], answer: 1, explain: "(正解 − 出力) が 0 のときは更新量も 0 になります。" }
+  ]);
+})();
+</script>
+</body>
+</html>

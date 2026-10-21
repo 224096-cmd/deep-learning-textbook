@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第6章 RNN</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    文章や音声のように<b>順番に並んだデータ（系列）</b>は、長さが決まっていません。
+    <b>RNN（再帰型ニューラルネットワーク）</b>は、同じニューロンを<b>時刻ごとに繰り返し使い</b>、前の時刻の「記憶」（隠れ状態）を次の時刻へ渡します。
+    ただし、記憶は毎回上書きされるので、<b>遠い過去を覚えておくのが苦手</b>です（勾配消失）。
+  </div>
+  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
+  <div class="code">// RNN の 1 ステップ（毎時刻、同じ W を使う）
+h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
+// h_t = 「いままで読んだ内容の要約」（隠れ状態）
+// 最後の h_T から答えを出す</div>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">隠れ状態 h_t</span>：時刻 t までに読んだ情報の要約ベクトル。RNN の「記憶」。</li>
+    <li><span class="term">展開（unroll）</span>：ループを時間方向に引き延ばし、1 本の深いネットとして描くこと。深さ＝系列の長さ。</li>
+    <li><span class="term">BPTT</span>：展開したネットに対する誤差逆伝播。長い系列ほど「深い」ので、第4章と同じ勾配消失が起きる。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：隠れ状態が時間とともにどう変わるか</h2>
+  <p>課題：「<b>最初のビット</b>（0 か 1）を、その後の雑音ビットが続いた<b>最後まで覚えておき</b>、最後に答える」。
+  下のビット列をクリックして変え、学習済み RNN の隠れ状態がどう変化するかを見ます。</p>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-pretrain">まず RNN を学習する（T=10）</button>
+    <span class="status" id="pst">未学習</span>
+  </div>
+  <div class="tokens" id="bits"></div>
+  <canvas id="hstate" width="820" height="200"></canvas>
+  <p class="canvas-caption">縦＝隠れ状態の各次元、横＝時刻。赤＝正、青＝負。最初のビットの情報が、どの次元に「保存」されているか探してみましょう。</p>
+  <p class="status" id="pred"></p>
+  <div class="note"><b>試してみよう</b>：学習後、先頭ビットだけを 0↔1 に切り替えると、途中の雑音を変えても最後の予測が変わりますか？ 雑音ビットを変えると隠れ状態はどう揺れますか？</div>
+</section>
+
+<section class="card">
+  <h2>体験②：時間をさかのぼる勾配はどこまで届く？</h2>
+  <div class="controls">
+    <label>系列の長さ T <input type="range" id="gT" min="5" max="60" step="5" value="30"> <span class="val" id="gTv">30</span></label>
+    <label>隠れ状態の大きさ <input type="range" id="gH" min="2" max="16" step="1" value="8"> <span class="val" id="gHv">8</span></label>
+    <button class="btn btn-small" id="btn-grad">乱数を変えて再計算</button>
+  </div>
+  <canvas id="gflow" width="820" height="240"></canvas>
+  <p class="canvas-caption">最後の出力の誤差が、各時刻の隠れ状態にどれだけ届くか（対数軸）。左へ行くほど小さくなる＝<b>最初の方の入力はほとんど学習の手がかりにならない</b>。</p>
+  <div id="export6g"></div>
+</section>
+
+<section class="card">
+  <h2>体験③：どこまで長く覚えられるか（学習実験）</h2>
+  <p>T を変えて RNN を学習させ、「解けるまでのステップ数」を記録しましょう。T が長くなると、どこかで解けなくなります。</p>
+  <div id="race"></div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz6"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/seq.js"></script>
+<script src="../assets/js/seqwidget.js"></script>
+<script>
+(function () {
+  DL.nav(6);
+  var $ = DL.$;
+  var rng = new DL.RNG(66);
+  var T1 = 10, bits = [1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0], model = new SEQ.Model("rnn", 6, new DL.RNG(2)), trained = false;
+  var gradRecords = [];
+
+  function renderBits() {
+    var c = $("bits"); c.innerHTML = "";
+    bits.forEach(function (b, i) {
+      var t = DL.el("div", { class: "token" + (i === 0 ? " sel" : ""), text: (i === 0 ? "先頭 " : "t=" + i + " ") + b });
+      t.addEventListener("click", function () { bits[i] = 1 - bits[i]; renderBits(); showState(); });
+      c.appendChild(t);
+    });
+  }
+  function xsFromBits() { return bits.map(function (b, i) { return [b, i === 0 ? 1 : 0]; }); }
+  function showState() {
+    var fw = model.forward(xsFromBits());
+    var M = []; for (var k = 0; k < model.H; k++) M.push(fw.steps.map(function (s) { return s.h[k]; }));
+    DL.heatmap($("hstate"), M, M.map(function (_, k) { return "h[" + k + "]"; }), fw.steps.map(function (_, t) { return "t=" + t; }), { diverging: true, vmin: -1, vmax: 1, showValues: true, digits: 1, left: 50 });
+    $("pred").textContent = "予測：先頭ビットは " + (fw.y > 0.5 ? 1 : 0) + "（確率 " + fw.y.toFixed(3) + "）／ 正解 " + bits[0] + (trained ? "" : "（まだ学習していないので当てずっぽうです）");
+    DL.log(6, "state_view", { bits: bits.join(""), pred: fw.y });
+  }
+  $("btn-pretrain").addEventListener("click", function () {
+    var btn = this; btn.disabled = true; var s = 0;
+    var t = setInterval(function () {
+      for (var k = 0; k < 10; k++) { model.trainStep(SEQ.makeBatch(T1, 8, rng), 0.01); s++; }
+      var acc = model.evaluate(SEQ.makeBatch(T1, 40, rng));
+      $("pst").textContent = "学習中… ステップ " + s + " 正答率 " + acc.toFixed(2);
+      showState();
+      if (acc >= 0.98 || s >= 1500) { clearInterval(t); trained = true; btn.disabled = false; $("pst").textContent = "学習完了（" + s + " ステップ、正答率 " + acc.toFixed(2) + "）"; showState(); DL.log(6, "pretrain", { steps: s, acc: acc }); }
+    }, 10);
+  });
+  renderBits(); showState();
+
+  function gflow() {
+    var T = parseInt($("gT").value, 10), H = parseInt($("gH").value, 10);
+    var s = SEQ.gradFlowChart($("gflow"), ["rnn"], T, H, rng.int(1e9))[0].values;
+    gradRecords.push({ T: T, hidden: H, grad_first: s[0].toExponential(3), grad_last: s[s.length - 1].toExponential(3), ratio: (s[0] / s[s.length - 1]).toExponential(3) });
+  }
+  $("gT").addEventListener("input", function () { $("gTv").textContent = this.value; gflow(); });
+  $("gH").addEventListener("input", function () { $("gHv").textContent = this.value; gflow(); });
+  $("btn-grad").addEventListener("click", gflow);
+  DL.exportButtons("export6g", function () { return gradRecords; }, ["T", "hidden", "grad_first", "grad_last", "ratio"], "ch06_rnn_gradflow", 6);
+  gflow();
+
+  SEQ.race("race", 6, { types: ["rnn"], T: 20, H: 8, lr: 0.01, steps: 1500 });
+
+  DL.quiz("quiz6", 6, [
+    { q: "RNN が可変長の系列を扱えるのはなぜ？", choices: ["入力ごとに別のネットを用意するから", "同じ重みを時刻ごとに繰り返し使い、隠れ状態で情報を引き継ぐから", "系列を固定長に切り捨てるから", "活性化関数を使わないから"], answer: 1 },
+    { q: "隠れ状態 h_t は何を表す？", choices: ["時刻 t の入力そのもの", "時刻 t までに読んだ情報の要約", "正解ラベル", "学習率"], answer: 1 },
+    { q: "RNN が長い系列で遠い過去を覚えにくい理由は？", choices: ["隠れ状態が毎時刻上書きされ、BPTT で勾配が時間をさかのぼるほど消えるから", "入力が多すぎてメモリ不足になるから", "学習率が自動で下がるから", "重みが時刻ごとに違うから"], answer: 0 }
+  ]);
+})();
+</script>
+</body>
+</html>

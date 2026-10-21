@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第10章 Attention</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    Seq2Seq のボトルネックを解決するのが <b>Attention（注意機構、2014〜2015）</b>。
+    デコーダが 1 語出すたびに、「入力文のどの単語を見ればよいか」を<b>重み（合計 1）</b>で決め、その重みで入力側の情報を混ぜ合わせます。
+    計算は「<b>問い合わせ（Query）</b>と<b>鍵（Key）</b>の似ている度合い → softmax で重みに → <b>値（Value）</b>の重み付き平均」の 3 ステップだけです。
+  </div>
+  <p class="video-ref">動画の対応箇所：39:30〜「Seq2Seq and Attention」</p>
+  <div class="code">score_i = Q · K_i                 似ている度合い（内積）
+w_i     = softmax(score)_i        合計 1 の重みにする
+出力    = Σ w_i · V_i              重みで値を混ぜる</div>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">Query（Q）</span>：「いま何を探しているか」。デコーダ側の状態から作る。</li>
+    <li><span class="term">Key（K）</span>：「私はこういう情報です」という各入力の見出し。Q と比べられる。</li>
+    <li><span class="term">Value（V）</span>：実際に取り出す中身。K とペアになっている。</li>
+    <li><span class="term">softmax</span>：数の列を、全部正で合計 1 の「割合」に変える関数。大きい数ほど大きな割合になる。</li>
+    <li><span class="term">アライメント</span>：出力の各単語が入力のどの単語に注目したかの対応表（ヒートマップで描ける）。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：Q・K・V を手で動かして注意の重みを見る</h2>
+  <p>4 つの入力（Key）と 1 つの Query を 2 次元ベクトルにしました。矢印をドラッグするか、スライダーで動かしてください。</p>
+  <div class="canvas-row">
+    <div>
+      <canvas id="vec" width="400" height="400"></canvas>
+      <p class="canvas-caption">黒＝Query、色付き＝Key（ドラッグで動かせる）。Query に向きが近い Key ほど重みが大きい。</p>
+      <div class="controls">
+        <label>温度（スケール）<input type="range" id="temp" min="0.1" max="3" step="0.1" value="1"> <span class="val" id="tempv">1.0</span></label>
+      </div>
+    </div>
+    <div>
+      <div class="table-wrap"><table class="data" id="atbl"></table></div>
+      <canvas id="wbar" width="400" height="160"></canvas>
+      <p class="canvas-caption">softmax 後の重み（合計 1）</p>
+      <p class="status" id="out"></p>
+      <div id="export10"></div>
+    </div>
+  </div>
+  <div class="note"><b>試してみよう</b>：①Query を 1 つの Key に重ねると重みがその Key に集中します。②温度を小さくすると 1 点集中（ほぼ one-hot）、大きくすると平均化。実際の Transformer では内積を √d で割る「スケール」がこの温度に当たります。</div>
+</section>
+
+<section class="card">
+  <h2>体験②：翻訳のアライメント（どの単語を見て訳したか）</h2>
+  <div class="controls">
+    <label>例文：<select id="ex">
+      <option value="0">The cat sat on the mat → 猫は マットの上に 座った</option>
+      <option value="1">I do not like coffee → 私は コーヒーが 好きでは ない</option>
+    </select></label>
+  </div>
+  <p>出力（日本語）の単語をクリックすると、その単語を出すときの注意の重みが入力側に表示されます。</p>
+  <div class="tokens" id="tgt"></div>
+  <div class="tokens" id="src"></div>
+  <canvas id="align" width="520" height="300"></canvas>
+  <p class="canvas-caption">行＝出力単語、列＝入力単語。語順が違う言語でも、必要な単語に直接「注目」できる（デモ用に用意した重み）。</p>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz10"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(10);
+  var $ = DL.$;
+  var keys = [{ v: [0.9, 0.3], c: "#dc2626", n: "K1" }, { v: [-0.5, 0.8], c: "#16a34a", n: "K2" }, { v: [-0.7, -0.6], c: "#d97706", n: "K3" }, { v: [0.4, -0.9], c: "#7c3aed", n: "K4" }];
+  var vals = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  var q = [0.6, 0.6], drag = null, records = [];
+  var cv = $("vec"), ctx = cv.getContext("2d");
+  var cx = cv.width / 2, cy = cv.height / 2, S = 150;
+  function toP(v) { return [cx + v[0] * S, cy - v[1] * S]; }
+  function arrow(v, color, label, w) {
+    var p = toP(v); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = w || 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p[0], p[1]); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p[0], p[1], 7, 0, 7); ctx.fill();
+    ctx.font = "13px sans-serif"; ctx.fillText(label, p[0] + 10, p[1] - 6); ctx.lineWidth = 1;
+  }
+  function compute() {
+    var temp = +$("temp").value;
+    var scores = keys.map(function (k) { return DL.dot(q, k.v); });
+    var w = DL.softmax(scores, temp);
+    var out = [0, 0]; w.forEach(function (wi, i) { out[0] += wi * vals[i][0]; out[1] += wi * vals[i][1]; });
+    return { scores: scores, w: w, out: out };
+  }
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.strokeStyle = "#e5e7eb"; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cv.height); ctx.moveTo(0, cy); ctx.lineTo(cv.width, cy); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, S, 0, 7); ctx.stroke();
+    var r = compute();
+    keys.forEach(function (k, i) { arrow(k.v, k.c, k.n + " (" + r.w[i].toFixed(2) + ")", 1 + r.w[i] * 6); });
+    arrow(q, "#111827", "Query", 3);
+    var tb = $("atbl"); tb.innerHTML = "<tr><th>Key</th><th>ベクトル</th><th>Q·K（スコア）</th><th>重み w</th><th>Value</th></tr>";
+    keys.forEach(function (k, i) { var tr = document.createElement("tr"); tr.innerHTML = "<td style='color:" + k.c + "'>" + k.n + "</td><td>(" + k.v[0].toFixed(2) + ", " + k.v[1].toFixed(2) + ")</td><td>" + r.scores[i].toFixed(3) + "</td><td><b>" + r.w[i].toFixed(3) + "</b></td><td>(" + vals[i][0] + ", " + vals[i][1] + ")</td>"; tb.appendChild(tr); });
+    DL.barChart($("wbar"), keys.map(function (k, i) { return { label: k.n, value: r.w[i], color: k.c }; }), { vmax: 1, left: 40 });
+    $("out").textContent = "出力 = Σ w·V = (" + r.out[0].toFixed(3) + ", " + r.out[1].toFixed(3) + ")　／　Query = (" + q[0].toFixed(2) + ", " + q[1].toFixed(2) + ")";
+    records.push({ qx: +q[0].toFixed(3), qy: +q[1].toFixed(3), temp: +$("temp").value, w1: +r.w[0].toFixed(4), w2: +r.w[1].toFixed(4), w3: +r.w[2].toFixed(4), w4: +r.w[3].toFixed(4), out_x: +r.out[0].toFixed(3), out_y: +r.out[1].toFixed(3) });
+    if (records.length > 500) records.shift();
+  }
+  function pos(e) { var r = cv.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return [((t.clientX - r.left) * cv.width / r.width - cx) / S, -((t.clientY - r.top) * cv.height / r.height - cy) / S]; }
+  function down(e) {
+    var p = pos(e), best = null, bd = 0.15;
+    var dq = Math.hypot(p[0] - q[0], p[1] - q[1]); if (dq < bd) { best = "q"; bd = dq; }
+    keys.forEach(function (k, i) { var d = Math.hypot(p[0] - k.v[0], p[1] - k.v[1]); if (d < bd) { best = i; bd = d; } });
+    if (best === null) best = "q";
+    drag = best; move(e); e.preventDefault();
+  }
+  function move(e) { if (drag === null) return; var p = pos(e); var n = Math.hypot(p[0], p[1]); if (n > 1.3) { p[0] *= 1.3 / n; p[1] *= 1.3 / n; } if (drag === "q") q = p; else keys[drag].v = p; draw(); e.preventDefault(); }
+  function up() { if (drag !== null) DL.log(10, "drag", { q: q }); drag = null; }
+  cv.addEventListener("mousedown", down); cv.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
+  cv.addEventListener("touchstart", down, { passive: false }); cv.addEventListener("touchmove", move, { passive: false }); window.addEventListener("touchend", up);
+  $("temp").addEventListener("input", function () { $("tempv").textContent = (+this.value).toFixed(1); draw(); });
+  DL.exportButtons("export10", function () { return records; }, ["qx", "qy", "temp", "w1", "w2", "w3", "w4", "out_x", "out_y"], "ch10_attention", 10);
+  draw();
+
+  // --- アライメント ---
+  var EX = [
+    { src: ["The", "cat", "sat", "on", "the", "mat"], tgt: ["猫は", "マットの", "上に", "座った"],
+      A: [[0.15, 0.75, 0.03, 0.02, 0.03, 0.02], [0.02, 0.03, 0.03, 0.07, 0.15, 0.70], [0.02, 0.03, 0.10, 0.65, 0.10, 0.10], [0.02, 0.08, 0.80, 0.05, 0.03, 0.02]] },
+    { src: ["I", "do", "not", "like", "coffee"], tgt: ["私は", "コーヒーが", "好きでは", "ない"],
+      A: [[0.85, 0.05, 0.03, 0.04, 0.03], [0.03, 0.02, 0.03, 0.07, 0.85], [0.03, 0.10, 0.07, 0.75, 0.05], [0.02, 0.18, 0.72, 0.05, 0.03]] }
+  ];
+  var sel = 0;
+  function renderAlign() {
+    var e = EX[+$("ex").value];
+    var tg = $("tgt"), sr = $("src"); tg.innerHTML = ""; sr.innerHTML = "";
+    tg.appendChild(DL.el("span", { class: "muted", text: "出力：" }));
+    e.tgt.forEach(function (w, j) { var t = DL.el("div", { class: "token" + (j === sel ? " sel" : ""), text: w }); t.addEventListener("click", function () { sel = j; renderAlign(); DL.log(10, "align_click", { word: w }); }); tg.appendChild(t); });
+    sr.appendChild(DL.el("span", { class: "muted", text: "入力：" }));
+    e.src.forEach(function (w, i) { var a = e.A[sel][i]; var t = DL.el("div", { class: "token", text: w + " " + (a * 100).toFixed(0) + "%" }); t.style.background = "rgba(37,99,235," + (a * 0.9 + 0.05) + ")"; t.style.color = a > 0.4 ? "#fff" : "#1f2430"; sr.appendChild(t); });
+    DL.heatmap($("align"), e.A, e.tgt, e.src, { vmin: 0, vmax: 1, showValues: true, left: 80, top: 30 });
+  }
+  $("ex").addEventListener("change", function () { sel = 0; renderAlign(); });
+  renderAlign();
+
+  DL.quiz("quiz10", 10, [
+    { q: "Attention の重みが「合計 1」になるのはどの計算のおかげ？", choices: ["内積", "softmax", "tanh", "足し算"], answer: 1 },
+    { q: "Query と Key の役割は？", choices: ["Query＝探しているもの、Key＝各入力の見出し。内積で似ている度合いを測る", "Query＝正解、Key＝予測", "どちらも同じもの", "Query＝入力、Key＝出力"], answer: 0 },
+    { q: "Attention が Seq2Seq のボトルネックを解決できる理由は？", choices: ["文脈ベクトルを大きくするから", "出力 1 語ごとに、入力の全単語から必要なものを直接重み付きで取り出せるから", "入力を短く切るから", "デコーダを無くすから"], answer: 1 }
+  ]);
+})();
+</script>
+</body>
+</html>

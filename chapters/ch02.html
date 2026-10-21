@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第2章 MLP</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    パーセプトロンを<b>何層も重ねる</b>と、曲がった境界線が引けるようになります。これが <b>MLP（多層パーセプトロン）</b>。
+    中間の層を<b>隠れ層</b>と呼び、各ニューロンの出力を曲げる<b>活性化関数</b>を挟むことで、XOR のような問題も解けます。
+    学習には<b>誤差逆伝播法（バックプロパゲーション）</b>を使います。
+  </div>
+  <p class="video-ref">動画の対応箇所：01:08〜「Perceptron and MLP」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">隠れ層</span>：入力と出力の間にある層。ここで特徴が作られる。</li>
+    <li><span class="term">活性化関数</span>：直線を曲げる関数。tanh、ReLU、シグモイドなど。これが無いと何層重ねても直線のまま。</li>
+    <li><span class="term">損失（loss）</span>：予測と正解のズレを 1 つの数にしたもの。小さいほど良い。</li>
+    <li><span class="term">勾配降下法</span>：損失が減る方向に重みを少しずつ動かす方法。</li>
+    <li><span class="term">誤差逆伝播法</span>：出力側の誤差を入力側へ逆向きに伝えて、各重みの「責任（勾配）」を計算する方法。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験：隠れ層の数・活性化関数を変えて学習する</h2>
+  <div class="controls">
+    <label>問題：
+      <select id="dataset">
+        <option value="xor" selected>XOR</option>
+        <option value="circle">円（内側 vs 外側）</option>
+        <option value="spiral">らせん（難しい）</option>
+      </select>
+    </label>
+    <label>隠れニューロン数 <input type="range" id="hidden" min="1" max="16" step="1" value="4"> <span class="val" id="hiddenv">4</span></label>
+    <label>活性化：
+      <select id="act">
+        <option value="tanh" selected>tanh</option>
+        <option value="relu">ReLU</option>
+        <option value="sigmoid">シグモイド</option>
+        <option value="linear">なし（線形）※比較用</option>
+      </select>
+    </label>
+    <label>学習率 <input type="range" id="lr" min="0.01" max="1" step="0.01" value="0.3"> <span class="val" id="lrv">0.30</span></label>
+  </div>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-reset">初期化</button>
+    <button class="btn btn-small" id="btn-train">100 エポック学習</button>
+    <button class="btn btn-small" id="btn-run">自動学習 開始/停止</button>
+    <span class="status" id="st"></span>
+  </div>
+  <div class="canvas-row">
+    <div>
+      <canvas id="plane" width="400" height="400"></canvas>
+      <p class="canvas-caption">背景＝ネットワークの出力（濃い青ほど 1 に近い）。白線＝0.5 の境界。</p>
+    </div>
+    <div>
+      <canvas id="loss" width="420" height="200"></canvas>
+      <p class="canvas-caption">損失（対数軸）の推移</p>
+      <canvas id="hid" width="420" height="180"></canvas>
+      <p class="canvas-caption">隠れ層の各ニューロンが担当する「直線」。MLP は直線を組み合わせて曲線を作っている。</p>
+      <div id="export2"></div>
+    </div>
+  </div>
+  <div class="note">
+    <b>試してみよう</b>：①活性化を「なし（線形）」にすると、隠れ層があっても XOR が解けません（線形の合成は線形）。
+    ②隠れニューロン 1〜2 個の XOR と 8 個の XOR で、学習の速さを比べましょう。③らせんは何個なら解けますか？
+  </div>
+</section>
+
+<section class="card">
+  <h2>記録表</h2>
+  <div class="table-wrap"><table class="data" id="tbl"><tr><th>#</th><th>問題</th><th>隠れ数</th><th>活性化</th><th>学習率</th><th>エポック</th><th>損失</th><th>正答率</th></tr></table></div>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz2"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(2);
+  var $ = DL.$;
+  var rng = new DL.RNG(11);
+  var pts = [], net, lossHist = [], epoch = 0, running = null, runNo = 0, records = [];
+
+  function makeData(kind) {
+    pts = [];
+    var i, r, a, c;
+    if (kind === "xor") {
+      for (i = 0; i < 120; i++) { var x = rng.next() * 2 - 1, y = rng.next() * 2 - 1; pts.push({ x: x, y: y, t: (x > 0) ^ (y > 0) }); }
+    } else if (kind === "circle") {
+      for (i = 0; i < 120; i++) { r = rng.next(); a = rng.next() * 2 * Math.PI; r = r < 0.5 ? r * 0.8 : 0.6 + r * 0.4; pts.push({ x: r * Math.cos(a), y: r * Math.sin(a), t: r < 0.5 ? 1 : 0 }); }
+    } else {
+      for (i = 0; i < 100; i++) { c = i % 2; r = (i / 100) * 0.9 + 0.1; a = (i / 100) * 3.2 * Math.PI / 1 * 0.9 + c * Math.PI; pts.push({ x: r * Math.cos(a) + rng.gauss() * 0.03, y: r * Math.sin(a) + rng.gauss() * 0.03, t: c }); }
+    }
+  }
+  var ACT = {
+    tanh: { f: Math.tanh, df: function (y) { return 1 - y * y; } },
+    relu: { f: function (x) { return x > 0 ? x : 0; }, df: function (y) { return y > 0 ? 1 : 0; } },
+    sigmoid: { f: DL.sigmoid, df: function (y) { return y * (1 - y); } },
+    linear: { f: function (x) { return x; }, df: function () { return 1; } }
+  };
+  function initNet() {
+    var H = parseInt($("hidden").value, 10);
+    net = { H: H, W1: [], b1: [], W2: [], b2: rng.gauss() * 0.1, act: $("act").value };
+    for (var j = 0; j < H; j++) { net.W1.push([rng.gauss() * 0.8, rng.gauss() * 0.8]); net.b1.push(rng.gauss() * 0.1); net.W2.push(rng.gauss() * 0.8); }
+    lossHist = []; epoch = 0; runNo++;
+  }
+  function forward(x, y) {
+    var a = ACT[net.act], h = [], z;
+    for (var j = 0; j < net.H; j++) { z = net.W1[j][0] * x + net.W1[j][1] * y + net.b1[j]; h.push(a.f(z)); }
+    var o = net.b2; for (j = 0; j < net.H; j++) o += net.W2[j] * h[j];
+    return { h: h, out: DL.sigmoid(o) };
+  }
+  function trainEpoch() {
+    var lr = parseFloat($("lr").value), a = ACT[net.act], L = 0;
+    // 1 サンプルずつ更新（確率的勾配降下法）
+    for (var k = 0; k < pts.length; k++) {
+      var p = pts[rng.int(pts.length)];
+      var f = forward(p.x, p.y);
+      var e = f.out - p.t;                 // 出力の誤差（交差エントロピー＋シグモイドの微分はこれだけ）
+      L += -(p.t * Math.log(f.out + 1e-9) + (1 - p.t) * Math.log(1 - f.out + 1e-9));
+      for (var j = 0; j < net.H; j++) {
+        var gh = e * net.W2[j] * a.df(f.h[j]);  // 逆伝播：隠れニューロン j の責任
+        net.W2[j] -= lr * e * f.h[j];
+        net.W1[j][0] -= lr * gh * p.x; net.W1[j][1] -= lr * gh * p.y; net.b1[j] -= lr * gh;
+      }
+      net.b2 -= lr * e;
+    }
+    epoch++;
+    // 1 エポック終了後、全データで損失を測り直す（なめらかな曲線にするため）
+    L = 0; pts.forEach(function (p) { var o = forward(p.x, p.y).out; L += -(p.t * Math.log(o + 1e-9) + (1 - p.t) * Math.log(1 - o + 1e-9)); });
+    lossHist.push(L / pts.length);
+  }
+  function accuracy() { var c = 0; pts.forEach(function (p) { if ((forward(p.x, p.y).out > 0.5 ? 1 : 0) === p.t) c++; }); return c / pts.length; }
+
+  var cv = $("plane"), ctx = cv.getContext("2d");
+  function draw() {
+    var img = ctx.createImageData(cv.width, cv.height), step = 5;
+    for (var py = 0; py < cv.height; py += step) for (var px = 0; px < cv.width; px += step) {
+      var o = forward(px / cv.width * 2 - 1, 1 - py / cv.height * 2).out;
+      var r = Math.round(254 - 217 * o), g = Math.round(226 + (234 - 226) * o), b = Math.round(226 + 28 * o);
+      if (o > 0.5) { r = Math.round(255 - 218 * (o - 0.5) * 2); g = Math.round(255 - 156 * (o - 0.5) * 2); b = 255; }
+      else { var u = (0.5 - o) * 2; r = 255; g = Math.round(255 - 120 * u); b = Math.round(255 - 140 * u); }
+      for (var dy = 0; dy < step; dy++) for (var dx = 0; dx < step; dx++) {
+        if (py + dy >= cv.height || px + dx >= cv.width) continue;
+        var i = ((py + dy) * cv.width + (px + dx)) * 4;
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    pts.forEach(function (p) {
+      ctx.beginPath(); ctx.arc((p.x + 1) / 2 * cv.width, (1 - (p.y + 1) / 2) * cv.height, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = p.t ? "#1d4ed8" : "#b91c1c"; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.stroke();
+    });
+    DL.lineChart($("loss"), [{ name: "損失", values: lossHist }], { logY: true, xLabel: "エポック", yLabel: "loss" });
+    // 隠れニューロンの直線
+    var hc = $("hid"), hx = hc.getContext("2d"); hx.clearRect(0, 0, hc.width, hc.height);
+    var S = Math.min(hc.width, hc.height) - 10, ox = (hc.width - S) / 2, oy = 5;
+    hx.strokeStyle = "#e5e7eb"; hx.strokeRect(ox, oy, S, S);
+    for (var j = 0; j < net.H; j++) {
+      var w1 = net.W1[j][0], w2 = net.W1[j][1], bb = net.b1[j];
+      hx.strokeStyle = "hsl(" + (j * 360 / net.H) + ",70%,45%)"; hx.lineWidth = 1.5; hx.beginPath();
+      if (Math.abs(w2) > 1e-6) { hx.moveTo(ox, oy + S * (1 - ((-bb + w1) / w2 + 1) / 2)); hx.lineTo(ox + S, oy + S * (1 - ((-bb - w1) / w2 + 1) / 2)); }
+      else if (Math.abs(w1) > 1e-6) { var xx = ox + S * (-bb / w1 + 1) / 2; hx.moveTo(xx, oy); hx.lineTo(xx, oy + S); }
+      hx.stroke();
+    }
+    $("st").textContent = "エポック " + epoch + " ／ 損失 " + (lossHist.length ? lossHist[lossHist.length - 1].toFixed(4) : "-") + " ／ 正答率 " + (accuracy() * 100).toFixed(1) + "%";
+  }
+  function record() {
+    var r = { run: runNo, dataset: $("dataset").value, hidden: net.H, activation: net.act, lr: parseFloat($("lr").value), epoch: epoch, loss: +lossHist[lossHist.length - 1].toFixed(5), accuracy: +accuracy().toFixed(4) };
+    records.push(r);
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + r.run + "</td><td>" + r.dataset + "</td><td>" + r.hidden + "</td><td>" + r.activation + "</td><td>" + r.lr + "</td><td>" + r.epoch + "</td><td>" + r.loss + "</td><td>" + (r.accuracy * 100).toFixed(1) + "%</td>";
+    $("tbl").appendChild(tr);
+    DL.log(2, "train", r);
+  }
+
+  $("hidden").addEventListener("input", function () { $("hiddenv").textContent = this.value; });
+  $("lr").addEventListener("input", function () { $("lrv").textContent = parseFloat(this.value).toFixed(2); });
+  $("dataset").addEventListener("change", function () { makeData(this.value); initNet(); draw(); });
+  $("act").addEventListener("change", function () { initNet(); draw(); });
+  $("btn-reset").addEventListener("click", function () { initNet(); draw(); });
+  $("btn-train").addEventListener("click", function () { for (var i = 0; i < 100; i++) trainEpoch(); draw(); record(); });
+  $("btn-run").addEventListener("click", function () {
+    if (running) { clearInterval(running); running = null; record(); return; }
+    running = setInterval(function () { for (var i = 0; i < 5; i++) trainEpoch(); draw(); if (epoch >= 3000) { clearInterval(running); running = null; record(); } }, 30);
+  });
+  DL.exportButtons("export2", function () { return records; }, ["run", "dataset", "hidden", "activation", "lr", "epoch", "loss", "accuracy"], "ch02_mlp", 2);
+
+  makeData("xor"); initNet(); draw();
+
+  DL.quiz("quiz2", 2, [
+    { q: "活性化関数を外して（線形のまま）層を重ねると？", choices: ["より複雑な境界が引ける", "結局 1 本の直線と同じ表現力しかない", "学習が速くなる", "損失が必ず 0 になる"], answer: 1, explain: "線形変換の合成は線形変換。曲げるには非線形の活性化関数が必要です。" },
+    { q: "誤差逆伝播法が計算しているものは？", choices: ["各重みを変えたら損失がどれだけ変わるか（勾配）", "入力データの平均", "正解ラベル", "ニューロンの個数"], answer: 0, explain: "出力の誤差を後ろから前へ伝えて、各重みの勾配を求めます。" },
+    { q: "隠れニューロンを増やすと一般にどうなる？", choices: ["表現できる境界が複雑になる", "必ず正答率が下がる", "活性化関数が不要になる", "学習率が自動で決まる"], answer: 0, explain: "直線（ReLU なら折れ線）の部品が増え、より複雑な形を作れます。" }
+  ]);
+})();
+</script>
+</body>
+</html>

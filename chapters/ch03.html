@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第3章 CNN</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    画像を MLP に入れると、ピクセルの位置が少しずれただけで別物に見えてしまいます。
+    <b>CNN（畳み込みニューラルネットワーク）</b>は、小さな<b>フィルタ（カーネル）</b>を画像の上で<b>スライド</b>させ、「どこにどんな模様があるか」を取り出します。
+    同じフィルタを全部の場所で使い回すので、重みの数が少なく、位置がずれても同じ特徴を見つけられます。
+  </div>
+  <p class="video-ref">動画の対応箇所：13:18〜「CNN and ResNet」</p>
+  <h3>用語</h3>
+  <ul>
+    <li><span class="term">畳み込み（convolution）</span>：フィルタと画像の重なった部分を掛けて足す計算を、位置をずらしながら繰り返すこと。</li>
+    <li><span class="term">カーネル／フィルタ</span>：3×3 などの小さな重みの表。学習で「縦線検出器」「斜め線検出器」などに育つ。</li>
+    <li><span class="term">特徴マップ</span>：畳み込みの出力画像。フィルタに反応した場所が明るくなる。</li>
+    <li><span class="term">プーリング</span>：近くの数ピクセルをまとめて 1 つにする（最大値を取る＝MaxPool）。多少のズレを吸収し、計算量を減らす。</li>
+    <li><span class="term">ストライド／パディング</span>：フィルタを何ピクセルずつ動かすか／端をゼロで埋めるかどうか。</li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>体験①：画像を描いて、フィルタをかける</h2>
+  <div class="controls">
+    <label>プリセット：
+      <select id="preset">
+        <option value="blank">白紙</option>
+        <option value="T" selected>T の字</option>
+        <option value="box">四角</option>
+        <option value="diag">斜め線</option>
+        <option value="x">X</option>
+      </select>
+    </label>
+    <label>フィルタ：
+      <select id="kernel">
+        <option value="vert" selected>縦エッジ</option>
+        <option value="horiz">横エッジ</option>
+        <option value="diag1">斜めエッジ</option>
+        <option value="blur">ぼかし</option>
+        <option value="sharp">シャープ</option>
+        <option value="custom">自分で作る</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="relu" checked> ReLU（負を 0 に）</label>
+    <label>ストライド <select id="stride"><option value="1">1</option><option value="2">2</option></select></label>
+    <button class="btn btn-small" id="btn-anim">スライドをアニメ表示</button>
+  </div>
+  <div class="canvas-row">
+    <div>
+      <p><b>入力画像（10×10）</b> ― マスをクリックして白黒を反転</p>
+      <div id="img" class="grid-cells"></div>
+    </div>
+    <div>
+      <p><b>フィルタ（3×3）</b> ― 値を編集できます</p>
+      <div id="ker" class="grid-cells"></div>
+      <p class="muted" id="kdesc"></p>
+    </div>
+    <div>
+      <p><b>特徴マップ</b> <span id="fmsize" class="muted"></span></p>
+      <canvas id="fm" width="260" height="260"></canvas>
+      <p class="canvas-caption">青＝正の大きな値（フィルタと一致）。アニメ中はオレンジ枠が「いま見ている場所」。</p>
+    </div>
+    <div>
+      <p><b>MaxPool 2×2 後</b> <span id="pmsize" class="muted"></span></p>
+      <canvas id="pm" width="260" height="260"></canvas>
+      <p class="canvas-caption">4 マスの最大値を 1 マスに。細かい位置の違いが消え、サイズが半分に。</p>
+    </div>
+  </div>
+  <div id="export3"></div>
+  <div class="note">
+    <b>試してみよう</b>：「T の字」に縦エッジ・横エッジのフィルタをかけ、どこが光るか見ましょう。
+    次に画像を 1 マス右にずらして描き直しても、特徴マップのパターンは同じ形のまま<b>一緒にずれる</b>ことを確認してください（これが「位置に強い」という意味）。
+  </div>
+</section>
+
+<section class="card">
+  <h2>体験②：重みの数を MLP と比べる</h2>
+  <div class="controls">
+    <label>画像サイズ <input type="range" id="imsz" min="8" max="256" step="8" value="28"> <span class="val" id="imszv">28</span>px</label>
+    <label>MLP の隠れニューロン数 <input type="number" id="mlph" value="128" min="1" style="width:80px"></label>
+    <label>CNN のフィルタ数 <input type="number" id="cnnf" value="16" min="1" style="width:80px"></label>
+  </div>
+  <canvas id="params" width="520" height="100"></canvas>
+  <p class="muted" id="paramtxt"></p>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz3"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script>
+(function () {
+  DL.nav(3);
+  var $ = DL.$;
+  var N = 10, img = [], K = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], records = [];
+  var KERNELS = {
+    vert: { k: [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]], d: "左右で明るさが変わる所（縦の線）に反応" },
+    horiz: { k: [[-1, -1, -1], [0, 0, 0], [1, 1, 1]], d: "上下で明るさが変わる所（横の線）に反応" },
+    diag1: { k: [[0, 1, 1], [-1, 0, 1], [-1, -1, 0]], d: "右上がりの斜め線に反応" },
+    blur: { k: [[1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9], [1 / 9, 1 / 9, 1 / 9]], d: "周りの平均＝ぼかし" },
+    sharp: { k: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]], d: "中心を強調＝シャープ化" },
+    custom: { k: [[0, 0, 0], [0, 1, 0], [0, 0, 0]], d: "数値を直接編集してください" }
+  };
+  var PRESETS = {
+    blank: [], T: [[1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], [2, 4], [2, 5], [3, 4], [3, 5], [4, 4], [4, 5], [5, 4], [5, 5], [6, 4], [6, 5], [7, 4], [7, 5]],
+    box: [[2, 2], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [3, 2], [3, 7], [4, 2], [4, 7], [5, 2], [5, 7], [6, 2], [6, 7], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6], [7, 7]],
+    diag: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [2, 1], [3, 2], [4, 3], [5, 4], [6, 5], [7, 6], [8, 7]],
+    x: [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [1, 8], [2, 7], [3, 6], [4, 5], [5, 4], [6, 3], [7, 2], [8, 1]]
+  };
+  function setPreset(name) {
+    img = []; for (var i = 0; i < N; i++) { img.push([]); for (var j = 0; j < N; j++) img[i].push(0); }
+    PRESETS[name].forEach(function (p) { img[p[0]][p[1]] = 1; });
+    renderImg();
+  }
+  function renderImg() {
+    var g = $("img"); g.innerHTML = ""; g.style.gridTemplateColumns = "repeat(" + N + ", 26px)";
+    for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) (function (i, j) {
+      var c = document.createElement("div"); c.className = "cell"; c.style.background = img[i][j] ? "#111827" : "#fff";
+      c.addEventListener("click", function () { img[i][j] = img[i][j] ? 0 : 1; c.style.background = img[i][j] ? "#111827" : "#fff"; compute(); });
+      g.appendChild(c);
+    })(i, j);
+  }
+  function renderKer() {
+    var g = $("ker"); g.innerHTML = ""; g.style.gridTemplateColumns = "repeat(3, 44px)";
+    for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) (function (i, j) {
+      var inp = document.createElement("input"); inp.type = "number"; inp.step = "0.5"; inp.value = +K[i][j].toFixed(2);
+      inp.style.width = "42px"; inp.style.height = "30px"; inp.style.textAlign = "center";
+      inp.addEventListener("change", function () { K[i][j] = parseFloat(inp.value) || 0; $("kernel").value = "custom"; compute(); });
+      g.appendChild(inp);
+    })(i, j);
+  }
+  var FM = [], PM = [], animPos = null;
+  function conv(stride) {
+    var out = [];
+    for (var i = 0; i + 3 <= N; i += stride) {
+      var row = [];
+      for (var j = 0; j + 3 <= N; j += stride) {
+        var s = 0;
+        for (var a = 0; a < 3; a++) for (var b = 0; b < 3; b++) s += K[a][b] * img[i + a][j + b];
+        if ($("relu").checked) s = Math.max(0, s);
+        row.push(s);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+  function pool(m) {
+    var out = [];
+    for (var i = 0; i + 1 < m.length; i += 2) { var row = []; for (var j = 0; j + 1 < m[0].length; j += 2) row.push(Math.max(m[i][j], m[i][j + 1], m[i + 1][j], m[i + 1][j + 1])); out.push(row); }
+    return out.length ? out : [[0]];
+  }
+  function drawMat(cv, m, highlight) {
+    var ctx = cv.getContext("2d"); ctx.clearRect(0, 0, cv.width, cv.height);
+    var rows = m.length, cols = m[0].length, cs = Math.floor(Math.min(cv.width / cols, cv.height / rows));
+    var vmax = 0; m.forEach(function (r) { r.forEach(function (v) { vmax = Math.max(vmax, Math.abs(v)); }); }); vmax = vmax || 1;
+    ctx.font = "11px sans-serif"; ctx.textAlign = "center";
+    for (var i = 0; i < rows; i++) for (var j = 0; j < cols; j++) {
+      var v = m[i][j] / vmax, t = v / 2 + 0.5;
+      ctx.fillStyle = v >= 0 ? "rgb(" + Math.round(255 - 218 * v) + "," + Math.round(255 - 156 * v) + ",255)" : "rgb(255," + Math.round(255 + 180 * v) + "," + Math.round(255 + 200 * v) + ")";
+      ctx.fillRect(j * cs, i * cs, cs - 1, cs - 1);
+      if (cs > 24) { ctx.fillStyle = Math.abs(v) > 0.6 ? "#fff" : "#374151"; ctx.fillText(m[i][j].toFixed(1), j * cs + cs / 2, i * cs + cs / 2 + 4); }
+    }
+    if (highlight) { ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 3; ctx.strokeRect(highlight[1] * cs + 1, highlight[0] * cs + 1, cs - 3, cs - 3); }
+  }
+  function compute() {
+    var s = parseInt($("stride").value, 10);
+    FM = conv(s); PM = pool(FM);
+    drawMat($("fm"), FM, animPos); drawMat($("pm"), PM);
+    $("fmsize").textContent = FM.length + "×" + FM[0].length; $("pmsize").textContent = PM.length + "×" + PM[0].length;
+    var mx = -Infinity, pos = [0, 0];
+    FM.forEach(function (r, i) { r.forEach(function (v, j) { if (v > mx) { mx = v; pos = [i, j]; } }); });
+    records.push({ preset: $("preset").value, kernel: $("kernel").value, stride: s, relu: $("relu").checked, fm_size: FM.length, max_response: +mx.toFixed(2), max_row: pos[0], max_col: pos[1] });
+  }
+  function highlightInput(pos, stride) {
+    var cells = $("img").children;
+    for (var i = 0; i < N; i++) for (var j = 0; j < N; j++) {
+      var inWin = pos && i >= pos[0] * stride && i < pos[0] * stride + 3 && j >= pos[1] * stride && j < pos[1] * stride + 3;
+      cells[i * N + j].style.outline = inWin ? "3px solid #f59e0b" : "none";
+    }
+  }
+  $("btn-anim").addEventListener("click", function () {
+    var btn = this; btn.disabled = true;
+    var s = parseInt($("stride").value, 10), i = 0, j = 0, rows = FM.length, cols = FM[0].length;
+    var t = setInterval(function () {
+      animPos = [i, j]; highlightInput(animPos, s); drawMat($("fm"), FM, animPos);
+      j++; if (j >= cols) { j = 0; i++; }
+      if (i >= rows) { clearInterval(t); animPos = null; highlightInput(null); drawMat($("fm"), FM); btn.disabled = false; DL.log(3, "animate", { stride: s }); }
+    }, 180);
+  });
+  $("preset").addEventListener("change", function () { setPreset(this.value); compute(); });
+  $("kernel").addEventListener("change", function () { K = KERNELS[this.value].k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS[this.value].d; renderKer(); compute(); DL.log(3, "kernel", { kernel: this.value }); });
+  $("relu").addEventListener("change", compute); $("stride").addEventListener("change", compute);
+  DL.exportButtons("export3", function () { return records; }, ["preset", "kernel", "stride", "relu", "fm_size", "max_response", "max_row", "max_col"], "ch03_cnn", 3);
+
+  // 体験②：パラメータ数比較
+  function params() {
+    var S = parseInt($("imsz").value, 10), H = parseInt($("mlph").value, 10) || 1, F = parseInt($("cnnf").value, 10) || 1;
+    var mlp = S * S * H + H;                  // 全結合 1 層（入力→隠れ）
+    var cnn = 3 * 3 * F + F;                  // 3×3 フィルタ F 枚（＋バイアス）
+    $("imszv").textContent = S;
+    DL.barChart($("params"), [{ label: "MLP（全結合）", value: mlp, color: "#dc2626" }, { label: "CNN（3×3×" + F + "）", value: cnn, color: "#2563eb" }], { left: 120, format: function (v) { return v.toLocaleString() + " 個"; } });
+    $("paramtxt").textContent = S + "×" + S + " の画像に対し、MLP の第 1 層は " + mlp.toLocaleString() + " 個、CNN の第 1 層は " + cnn.toLocaleString() + " 個の重み（約 " + (mlp / cnn).toFixed(0) + " 倍の差）。CNN は同じフィルタを全位置で使い回すため、画像が大きくなっても重みの数は増えません。";
+  }
+  ["imsz", "mlph", "cnnf"].forEach(function (id) { $(id).addEventListener("input", params); });
+
+  K = KERNELS.vert.k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS.vert.d;
+  setPreset("T"); renderKer(); compute(); params();
+
+  DL.quiz("quiz3", 3, [
+    { q: "畳み込み層で「同じフィルタを全部の場所で使い回す」利点は？", choices: ["重みの数が減り、位置がずれても同じ特徴を検出できる", "画像が大きくなる", "活性化関数が不要になる", "正解ラベルが不要になる"], answer: 0, explain: "パラメータ共有により、少ない重みで位置に強い特徴抽出ができます。" },
+    { q: "MaxPool 2×2 の働きは？", choices: ["画像を 2 倍に拡大する", "4 マスの最大値を 1 マスにまとめ、小さなズレを吸収する", "色を反転する", "フィルタの値を学習する"], answer: 1, explain: "ダウンサンプリングにより計算量が減り、わずかな位置ずれに鈍感になります。" },
+    { q: "10×10 の画像に 3×3 フィルタをストライド 1・パディングなしでかけると特徴マップの大きさは？", choices: ["10×10", "9×9", "8×8", "3×3"], answer: 2, explain: "(10 − 3) / 1 + 1 = 8。" }
+  ]);
+})();
+</script>
+</body>
+</html>

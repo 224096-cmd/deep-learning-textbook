@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第7章 LSTM</title>
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+<main class="container wide">
+
+<section class="card">
+  <h2>この章で分かること</h2>
+  <div class="goal">
+    RNN の記憶は毎回上書きされていました。<b>LSTM（長・短期記憶、1997）</b>は、上書きされない専用の<b>記憶セル c</b> と、
+    「どれだけ忘れるか」「どれだけ書き込むか」「どれだけ読み出すか」を 0〜1 で制御する <b>3 つのゲート</b>を持ちます。
+    記憶セルへの足し算の道は、第4章の残差接続と同じ「勾配の高速道路」になります。
+  </div>
+  <p class="video-ref">動画の対応箇所：25:52〜「Word Embeddings, RNN, LSTM and GRU」</p>
+  <div class="code">f = σ(…)  忘却ゲート：前の記憶をどれだけ残すか（1=全部残す）
+i = σ(…)  入力ゲート：新しい情報をどれだけ書き込むか
+o = σ(…)  出力ゲート：記憶のうちどれだけ外に出すか
+g = tanh(…) 書き込み候補
+c_t = f * c_{t-1} + i * g      ← 掛け算と足し算だけ。f≈1 なら記憶がそのまま保たれる
+h_t = o * tanh(c_t)</div>
+</section>
+
+<section class="card">
+  <h2>体験①：ゲートを手で動かして「記憶」を観察する</h2>
+  <p>1 次元の記憶セル c を使い、ゲートの値を自分で決めて入力を 1 つずつ流し込みます。</p>
+  <div class="controls">
+    <label>忘却ゲート f <input type="range" id="gf" min="0" max="1" step="0.05" value="1"> <span class="val" id="gfv">1.00</span></label>
+    <label>入力ゲート i <input type="range" id="gi" min="0" max="1" step="0.05" value="0"> <span class="val" id="giv">0.00</span></label>
+    <label>出力ゲート o <input type="range" id="go" min="0" max="1" step="0.05" value="1"> <span class="val" id="gov">1.00</span></label>
+    <label>入力候補 g <input type="range" id="gg" min="-1" max="1" step="0.1" value="0.8"> <span class="val" id="ggv">0.8</span></label>
+  </div>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-step">1 ステップ進める</button>
+    <button class="btn btn-small" id="btn-write">「書き込む」ステップ（f=1, i=1）</button>
+    <button class="btn btn-small" id="btn-keep">「保つ」ステップ（f=1, i=0）</button>
+    <button class="btn btn-small" id="btn-forget">「忘れる」ステップ（f=0）</button>
+    <button class="btn btn-small btn-outline" id="btn-clear">リセット</button>
+  </div>
+  <canvas id="cell" width="820" height="220"></canvas>
+  <p class="canvas-caption">青＝記憶セル c の値、オレンジ＝出力 h。RNN と違い、「保つ」を何回押しても c は減りません。</p>
+  <div class="table-wrap"><table class="data" id="celltbl"><tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr></table></div>
+  <div id="export7a"></div>
+</section>
+
+<section class="card">
+  <h2>体験②：勾配の流れを RNN と比べる</h2>
+  <div class="controls">
+    <label>系列の長さ T <input type="range" id="gT" min="5" max="60" step="5" value="30"> <span class="val" id="gTv">30</span></label>
+    <button class="btn btn-small" id="btn-grad">乱数を変えて再計算</button>
+  </div>
+  <canvas id="gflow" width="820" height="240"></canvas>
+  <p class="canvas-caption">赤＝RNN、青＝LSTM（学習前、同じ乱数）。LSTM では記憶セルを通る道のおかげで、最初の時刻まで勾配が届きやすい。</p>
+</section>
+
+<section class="card">
+  <h2>体験③：学習レース RNN vs LSTM</h2>
+  <p>同じ課題・同じ条件で、どちらが先に「解ける」か競争させます。T を長くすると差が開きます。</p>
+  <div id="race"></div>
+  <div class="note"><b>試してみよう</b>：T=30 で LSTM は数百ステップで解けますが、RNN は 1000 ステップ以上かかるか解けないことが多いです。最適化を「SGD（素朴）」にすると、勾配消失の影響がより露骨に出ます。</div>
+</section>
+
+<section class="card">
+  <h2>体験④：学習済み LSTM のゲートを見る</h2>
+  <div class="controls">
+    <button class="btn btn-small" id="btn-pre">LSTM を学習して可視化（T=15）</button>
+    <span class="status" id="pst"></span>
+  </div>
+  <div class="tokens" id="bits"></div>
+  <div class="canvas-row">
+    <div><canvas id="gatef" width="400" height="160"></canvas><p class="canvas-caption">忘却ゲート f（1=保持）</p></div>
+    <div><canvas id="gatei" width="400" height="160"></canvas><p class="canvas-caption">入力ゲート i（1=書き込み）</p></div>
+    <div><canvas id="cellc" width="400" height="160"></canvas><p class="canvas-caption">記憶セル c</p></div>
+  </div>
+  <p class="status" id="pred"></p>
+</section>
+
+<section class="card">
+  <h2>小テスト</h2>
+  <div id="quiz7"></div>
+</section>
+
+</main>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/seq.js"></script>
+<script src="../assets/js/seqwidget.js"></script>
+<script>
+(function () {
+  DL.nav(7);
+  var $ = DL.$;
+  var rng = new DL.RNG(77);
+
+  // --- 体験① ---
+  var hist = [], c = 0;
+  function readG() { return { f: +$("gf").value, i: +$("gi").value, o: +$("go").value, g: +$("gg").value }; }
+  function stepCell(G) {
+    c = G.f * c + G.i * G.g; var h = G.o * Math.tanh(c);
+    hist.push({ t: hist.length + 1, f: G.f, i: G.i, g: G.g, o: G.o, c: +c.toFixed(3), h: +h.toFixed(3) });
+    drawCell();
+  }
+  function drawCell() {
+    DL.lineChart($("cell"), [{ name: "記憶セル c", values: hist.map(function (r) { return r.c; }), color: "#2563eb" }, { name: "出力 h", values: hist.map(function (r) { return r.h; }), color: "#d97706" }], { xLabel: "ステップ", yLabel: "値", yMin: -2, yMax: 2 });
+    var tb = $("celltbl"); tb.innerHTML = "<tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr>";
+    hist.slice(-8).forEach(function (r) { var tr = document.createElement("tr"); tr.innerHTML = ["t", "f", "i", "g", "o", "c", "h"].map(function (k) { return "<td>" + r[k] + "</td>"; }).join(""); tb.appendChild(tr); });
+  }
+  ["gf", "gi", "go", "gg"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); }); });
+  $("btn-step").addEventListener("click", function () { stepCell(readG()); });
+  $("btn-write").addEventListener("click", function () { var G = readG(); G.f = 1; G.i = 1; stepCell(G); });
+  $("btn-keep").addEventListener("click", function () { var G = readG(); G.f = 1; G.i = 0; stepCell(G); });
+  $("btn-forget").addEventListener("click", function () { var G = readG(); G.f = 0; stepCell(G); });
+  $("btn-clear").addEventListener("click", function () { hist = []; c = 0; drawCell(); });
+  DL.exportButtons("export7a", function () { return hist; }, ["t", "f", "i", "g", "o", "c", "h"], "ch07_lstm_cell", 7);
+  drawCell();
+
+  // --- 体験② ---
+  function gflow() { SEQ.gradFlowChart($("gflow"), ["rnn", "lstm"], parseInt($("gT").value, 10), 8, rng.int(1e9)); }
+  $("gT").addEventListener("input", function () { $("gTv").textContent = this.value; gflow(); });
+  $("btn-grad").addEventListener("click", gflow);
+  gflow();
+
+  // --- 体験③ ---
+  SEQ.race("race", 7, { types: ["rnn", "lstm"], T: 30, H: 8, lr: 0.01, steps: 1500 });
+
+  // --- 体験④ ---
+  var T4 = 15, bits = [1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1], model = new SEQ.Model("lstm", 6, new DL.RNG(3)), trained = false;
+  function renderBits() {
+    var cc = $("bits"); cc.innerHTML = "";
+    bits.forEach(function (b, i) { var t = DL.el("div", { class: "token" + (i === 0 ? " sel" : ""), text: (i === 0 ? "先頭 " : "") + b }); t.addEventListener("click", function () { bits[i] = 1 - bits[i]; renderBits(); show(); }); cc.appendChild(t); });
+  }
+  function show() {
+    var fw = model.forward(bits.map(function (b, i) { return [b, i === 0 ? 1 : 0]; }));
+    var mk = function (key) { var M = []; for (var k = 0; k < model.H; k++) M.push(fw.steps.map(function (s) { return s[key][k]; })); return M; };
+    var labs = fw.steps.map(function (_, t) { return String(t); }), rows = []; for (var k = 0; k < model.H; k++) rows.push("" + k);
+    DL.heatmap($("gatef"), mk("f"), rows, labs, { vmin: 0, vmax: 1, left: 24, top: 20 });
+    DL.heatmap($("gatei"), mk("i"), rows, labs, { vmin: 0, vmax: 1, left: 24, top: 20 });
+    DL.heatmap($("cellc"), mk("c"), rows, labs, { diverging: true, vmin: -3, vmax: 3, left: 24, top: 20 });
+    $("pred").textContent = "予測：先頭ビット " + (fw.y > 0.5 ? 1 : 0) + "（確率 " + fw.y.toFixed(3) + "）／ 正解 " + bits[0] + (trained ? "" : "（未学習）");
+  }
+  $("btn-pre").addEventListener("click", function () {
+    var btn = this; btn.disabled = true; var s = 0;
+    var t = setInterval(function () {
+      for (var k = 0; k < 5; k++) { model.trainStep(SEQ.makeBatch(T4, 8, rng), 0.01); s++; }
+      var acc = model.evaluate(SEQ.makeBatch(T4, 40, rng));
+      $("pst").textContent = "学習中… ステップ " + s + " 正答率 " + acc.toFixed(2); show();
+      if (acc >= 0.98 || s >= 1200) { clearInterval(t); trained = true; btn.disabled = false; $("pst").textContent = "学習完了（" + s + " ステップ）"; show(); DL.log(7, "pretrain", { steps: s, acc: acc }); }
+    }, 10);
+  });
+  renderBits(); show();
+
+  DL.quiz("quiz7", 7, [
+    { q: "LSTM の忘却ゲートが 1 に近いとき、記憶セル c は？", choices: ["すぐ 0 になる", "前の値がほぼそのまま保たれる", "入力で上書きされる", "出力に出ない"], answer: 1 },
+    { q: "LSTM が長期の依存関係を学べる主な理由は？", choices: ["隠れ状態が大きいから", "記憶セルが掛け算と足し算だけで更新され、勾配の通り道になるから", "学習率が高いから", "tanh を使わないから"], answer: 1, explain: "c_t = f·c_{t-1} + i·g の足し算の道が、残差接続と同じ役目をします。" },
+    { q: "出力ゲート o の役割は？", choices: ["新しい情報を書き込む量を決める", "記憶を消す量を決める", "記憶セルのうちどれだけを h として外に出すかを決める", "学習率を決める"], answer: 2 }
+  ]);
+})();
+</script>
+</body>
+</html>
