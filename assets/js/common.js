@@ -207,7 +207,7 @@ var DL = (function () {
       });
       Array.prototype.forEach.call(ctl.querySelectorAll("button.btn"), function (b) {
         var t = b.textContent;
-        if (/リセット|初期化|戻す|消去|再計算|配置し直す|入れ替える|乱数/.test(t) && !/開始|学習|実行|再生/.test(t)) b.classList.add("btn-ghost");
+        if (/リセット|初期化|戻す|消去|消す|再計算|配置し直す|入れ替える|乱数/.test(t) && !/開始|学習|実行|再生/.test(t)) b.classList.add("btn-ghost");
         else b.classList.add("btn-primary");
       });
     });
@@ -648,8 +648,9 @@ var DL = (function () {
     function port(n, toward) {
       var cx = center(n), dx = toward[0] - cx[0], dy = toward[1] - cx[1];
       if (n.shape === "circle" || n.shape === "op") { var r = n.w / 2, L = Math.hypot(dx, dy) || 1; return [cx[0] + dx / L * r, cx[1] + dy / L * r]; }
-      if (Math.abs(dx) * n.h > Math.abs(dy) * n.w) return [dx > 0 ? n.x + n.w : n.x, cx[1]];
-      return [cx[0], dy > 0 ? n.y + n.h : n.y];
+      var clamp = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
+      if (Math.abs(dx) * n.h > Math.abs(dy) * n.w) return [dx > 0 ? n.x + n.w : n.x, clamp(toward[1], n.y + 12, n.y + n.h - 12)];
+      return [clamp(toward[0], n.x + 14, n.x + n.w - 14), dy > 0 ? n.y + n.h : n.y];
     }
     var gE = sv("g"), gN = sv("g"); svg.appendChild(gE); svg.appendChild(gN);
     (spec.edges || []).forEach(function (e) {
@@ -667,7 +668,7 @@ var DL = (function () {
         var lab = sv("text", { class: "arch-edge-label", fill: stroke }, e.label), lx, ly;
         if (e.labelAt) { lx = e.labelAt[0]; ly = e.labelAt[1]; }
         else if (e.bend) { lx = ((p1[0] + p2[0]) / 2 + mx) / 2; ly = ((p1[1] + p2[1]) / 2 + my) / 2 + (e.bend < 0 ? -6 : 14); }
-        else { var dx0 = p2[0] - p1[0], dy0 = p2[1] - p1[1], L0 = Math.hypot(dx0, dy0) || 1; lx = (p1[0] + p2[0]) / 2 - dy0 / L0 * 10; ly = (p1[1] + p2[1]) / 2 + dx0 / L0 * 10 - 2; }
+        else { var dx0 = p2[0] - p1[0], dy0 = p2[1] - p1[1], L0 = Math.hypot(dx0, dy0) || 1; lx = (p1[0] + p2[0]) / 2 + Math.abs(dy0) / L0 * 16; ly = (p1[1] + p2[1]) / 2 - Math.abs(dx0) / L0 * 9 - 2; if (Math.abs(dy0) > Math.abs(dx0)) { lab.setAttribute("text-anchor", "start"); } }
         lab.setAttribute("x", lx); lab.setAttribute("y", ly); lab.setAttribute("text-anchor", "middle"); gE.appendChild(lab);
       }
     });

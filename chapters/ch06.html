@@ -24,7 +24,7 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
   <ul>
     <li><span class="term">隠れ状態 h_t</span>：時刻 t までに読んだ情報の要約ベクトル。RNN の「記憶」。</li>
     <li><span class="term">展開（unroll）</span>：ループを時間方向に引き延ばし、1 本の深いネットとして描くこと。深さ＝系列の長さ。</li>
-    <li><span class="term">BPTT</span>：展開したネットに対する誤差逆伝播。長い系列ほど「深い」ので、第4章と同じ勾配消失が起きる。</li>
+    <li><span class="term">BPTT</span>（Backpropagation Through Time）：展開したネットに対する誤差逆伝播。最後の出力の誤差を、時刻 T → T−1 → … → 0 と時間をさかのぼって伝え、各時刻で同じ重みへの勾配を足し合わせる。長い系列ほど「深い」ので、第4章と同じ勾配消失が起きる。</li>
   </ul></details>
 </section>
 
@@ -37,7 +37,7 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
     <span class="status" id="pst">未学習</span>
   </div>
   <div class="tokens" id="bits"></div>
-  <div class="controls"><button class="btn btn-small" id="btn-play">時刻を 1 つずつ進めて見る</button></div>
+  <div class="controls"><button class="btn btn-small" id="btn-play">時刻を 1 つずつ進めて見る</button><button class="btn btn-small" id="btn-bits">ビット列を元に戻す</button></div>
   <canvas id="hstate" width="820" height="200"></canvas>
   <p class="canvas-caption">縦＝隠れ状態の各次元、横＝時刻。赤＝正、青＝負。最初のビットの情報が、どの次元に「保存」されているか探してみましょう。</p>
   <p class="status" id="pred"></p>
@@ -118,6 +118,8 @@ h_t = tanh( Wx·x_t + Wh·h_{t-1} + b )
     var t = 0; btn.classList.add("running");
     showT = setInterval(function () { showState(t); var toks = $("bits").children; for (var i = 0; i < toks.length; i++) toks[i].style.outline = i === t ? "3px solid #f59e0b" : "none"; t++; if (t > bits.length) { clearInterval(showT); showT = null; btn.classList.remove("running"); for (i = 0; i < toks.length; i++) toks[i].style.outline = "none"; showState(); } }, 350);
   });
+  var defaultBits = bits.slice();
+  $("btn-bits").addEventListener("click", function () { bits = defaultBits.slice(); renderBits(); showState(); });
   renderBits(); showState();
 
   function gflow() {

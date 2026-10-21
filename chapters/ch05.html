@@ -34,6 +34,7 @@
     <label>窓の幅 <input type="range" id="win" min="1" max="3" step="1" value="2"> <span class="val" id="winv">2</span></label>
     <label>学習率 <input type="range" id="lr" min="0.01" max="0.3" step="0.01" value="0.1"> <span class="val" id="lrv">0.10</span></label>
     <button class="btn btn-small" id="btn-init">初期化</button>
+    <button class="btn btn-small" id="btn-corpus">文章集を元に戻す</button>
     <button class="btn btn-small" id="btn-train">50 エポック学習</button>
     <button class="btn btn-small" id="btn-auto">動かしながら学習（開始/停止）</button>
     <span class="status" id="st"></span>
@@ -169,7 +170,9 @@
     }
     $("st").textContent = "語彙 " + vocab.length + " 語 ／ エポック " + epoch;
   }
+  var defaultCorpus = $("corpus").value;
   $("btn-init").addEventListener("click", init);
+  $("btn-corpus").addEventListener("click", function () { $("corpus").value = defaultCorpus; init(); });
   $("btn-train").addEventListener("click", function () {
     var L = 0; for (var i = 0; i < 50; i++) L = trainEpoch();
     draw();

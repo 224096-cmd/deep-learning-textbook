@@ -52,6 +52,7 @@
     <label>ストライド <select id="stride"><option value="1">1</option><option value="2">2</option></select></label>
     <button class="btn btn-small" id="btn-anim">フィルタが滑る様子を再生</button>
     <label><input type="checkbox" id="loop" checked> 繰り返し再生</label>
+    <button class="btn btn-small" id="btn-reset3">リセット</button>
   </div>
   <div class="canvas-row">
     <div>
@@ -217,6 +218,7 @@
   });
   ["preset", "kernel", "stride", "relu"].forEach(function (id) { $(id).addEventListener("change", function () { if (animTimer) stopAnim(); }); });
   $("preset").addEventListener("change", function () { setPreset(this.value); compute(); });
+  $("btn-reset3").addEventListener("click", function () { if (animTimer) stopAnim(); $("preset").value = "T"; $("kernel").value = "vert"; $("stride").value = "1"; $("relu").checked = true; K = KERNELS.vert.k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS.vert.d; setPreset("T"); renderKer(); compute(); });
   $("kernel").addEventListener("change", function () { K = KERNELS[this.value].k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS[this.value].d; renderKer(); compute(); DL.log(3, "kernel", { kernel: this.value }); });
   $("relu").addEventListener("change", compute); $("stride").addEventListener("change", compute);
 

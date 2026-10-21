@@ -12,9 +12,9 @@
 <section class="card">
   <h2>この章で分かること</h2>
   <div class="goal">
-    <b>Transformer（2017, "Attention Is All You Need"）</b>は RNN を捨て、<b>Attention だけ</b>で系列を処理します。
-    各単語が文中の<b>すべての単語</b>に注意を向ける<b>自己注意（Self-Attention）</b>を、見る観点の違う<b>複数のヘッド</b>で同時に行い、
-    RNN のように 1 語ずつ待たずに<b>全単語を一度に（並列に）</b>計算できます。順番の情報は<b>位置エンコーディング</b>で足します。
+    <b>Transformer（2017）</b>は RNN を使わず、<b>Attention だけ</b>で文を処理します。ポイントは 3 つ。
+    ①各単語が文中の<b>全単語</b>を見る<b>自己注意</b>。②それを観点の違う<b>複数のヘッド</b>で同時に行う。③1 語ずつ待たず<b>全単語を一度に（並列に）</b>計算できる。
+    代わりに語順が分からなくなるので、<b>位置エンコーディング</b>で「何番目か」を足します。
   </div>
   <div class="code">// 1 つの Transformer ブロック
 X  = 埋め込み + 位置エンコーディング
@@ -40,6 +40,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
     <label><input type="checkbox" id="causal"> 未来を見ない（因果マスク：GPT 型）</label>
     <button class="btn btn-small" id="btn-shuffle">単語順を入れ替える</button>
     <button class="btn btn-small" id="btn-reseed">重みの乱数を変える</button>
+    <button class="btn btn-small" id="btn-reset11">元に戻す</button>
   </div>
   <canvas id="arcs" width="860" height="230"></canvas>
   <p class="canvas-caption">ヘッド 1 の自己注意を動かして見る：黄色の単語（Query）が、文中の全単語（Key）から情報を集める。線の太さ＝重み。Query は自動で順に切り替わる。</p>
@@ -142,6 +143,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   $("sent").addEventListener("input", compute);
   $("btn-shuffle").addEventListener("click", function () { var w = $("sent").value.trim().split(/\s+/); for (var i = w.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = w[i]; w[i] = w[j]; w[j] = t; } $("sent").value = w.join(" "); compute(); DL.log(11, "shuffle", { pe: $("pe").checked }); });
   $("btn-reseed").addEventListener("click", function () { seed = Math.floor(Math.random() * 1e9); compute(); });
+  $("btn-reset11").addEventListener("click", function () { $("sent").value = "猫 が 魚 を 食べた"; $("heads").value = "2"; $("pe").checked = true; $("causal").checked = false; seed = 1234; arcQ = 0; compute(); });
   compute();
 
   function drawPE() {

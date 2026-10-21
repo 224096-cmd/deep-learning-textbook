@@ -73,19 +73,19 @@ var DL_DIAGRAMS = {
       { id: "res", x: 750, y: 150, w: 140, h: 80, color: "green", label: "似た文脈の単語が\n近づく", desc: "「王」と「女王」は同じような周辺語（城・治める）を持つので、予測がうまくいくようにするとベクトルが似てくる。" }
     ],
     edges: [ { from: "w3", to: "E", color: "amber", label: "行を選ぶ" }, { from: "E", to: "v", color: "blue" }, { from: "v", to: "pred", color: "amber" }, { from: "pred", to: "res", color: "violet" },
-      { from: "w3", to: "w1", color: "gray", bend: -40, dashed: true }, { from: "w3", to: "w5", color: "gray", bend: -40, dashed: true, label: "窓（文脈）" } ] },
+      { path: "M24 34 L24 22 L406 22 L406 34", color: "gray", noArrow: true, label: "窓（幅 2）：中心「城」の前後 2 語ずつが文脈", labelAt: [215, 14] } ] },
   6: { w: 900, h: 250, intro: "RNN は「同じ部品を時刻ごとに使い回す」。左のループを時間方向に引き延ばすと右の形（展開）になる。",
     nodes: [
-      { id: "x", x: 40, y: 185, shape: "circle", color: "gray", label: "xₜ", desc: "時刻 t の入力（1 文字・1 単語・1 時刻の値）。" },
-      { id: "cell", x: 20, y: 80, w: 100, h: 60, color: "blue", label: "RNN", sub: "h = tanh(Wx·x + Wh·h + b)", desc: "毎時刻、同じ重み Wx, Wh, b を使う。前の隠れ状態 h と今の入力 x から、新しい h を作る。" },
-      { id: "h", x: 48, y: 10, shape: "circle", color: "green", label: "hₜ", desc: "隠れ状態（記憶）。次の時刻にも渡される。" },
-      { id: "eq", x: 170, y: 95, w: 40, h: 30, color: "gray", label: "＝", desc: "" },
+      { id: "x", x: 53, y: 185, shape: "circle", color: "gray", label: "xₜ", desc: "時刻 t の入力（1 文字・1 単語・1 時刻の値）。" },
+      { id: "cell", x: 10, y: 80, w: 130, h: 60, color: "blue", label: "RNN", sub: "tanh(Wx·x + Wh·h + b)", desc: "毎時刻、同じ重み Wx, Wh, b を使う。前の隠れ状態 h と今の入力 x から、新しい h を作る。" },
+      { id: "h", x: 53, y: 10, shape: "circle", color: "green", label: "hₜ", desc: "隠れ状態（記憶）。次の時刻にも渡される。" },
+      { id: "eq", x: 190, y: 95, w: 34, h: 30, color: "gray", label: "＝", desc: "" },
       { id: "x0", x: 250, y: 185, shape: "circle", color: "gray", label: "x₀", desc: "最初の入力。" }, { id: "x1", x: 420, y: 185, shape: "circle", color: "gray", label: "x₁", desc: "2 番目の入力。" }, { id: "x2", x: 590, y: 185, shape: "circle", color: "gray", label: "x₂", desc: "3 番目の入力。" },
       { id: "c0", x: 230, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 0。h₋₁（ゼロ）と x₀ から h₀ を作る。" }, { id: "c1", x: 400, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 1。h₀ と x₁ から h₁ を作る。h₀ は上書きされる＝古い情報は薄れていく。" }, { id: "c2", x: 570, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 2。展開すると「系列の長さぶん深いネット」になり、第4章と同じ勾配消失が起きる。" },
       { id: "h0", x: 250, y: 10, shape: "circle", color: "green", label: "h₀", desc: "" }, { id: "h1", x: 420, y: 10, shape: "circle", color: "green", label: "h₁", desc: "" }, { id: "h2", x: 590, y: 10, shape: "circle", color: "green", label: "h₂", desc: "" },
       { id: "out", x: 730, y: 85, w: 150, h: 50, color: "violet", label: "最後の h から答え", desc: "系列全体を読み終えた隠れ状態を使って、分類や次の単語の予測をする。" }
     ],
-    edges: [ { from: "x", to: "cell", color: "gray" }, { from: "cell", to: "h", color: "green" }, { path: "M110 95 C150 60 150 150 110 125", color: "blue", label: "h を次の時刻へ", labelAt: [175, 160] },
+    edges: [ { from: "x", to: "cell", color: "gray" }, { from: "cell", to: "h", color: "green" }, { path: "M140 98 C178 72 178 150 142 128", color: "blue", label: "h を次の時刻へ", labelAt: [120, 175], width: 2.5 },
       { from: "x0", to: "c0", color: "gray" }, { from: "x1", to: "c1", color: "gray" }, { from: "x2", to: "c2", color: "gray" },
       { from: "c0", to: "h0", color: "green" }, { from: "c1", to: "h1", color: "green" }, { from: "c2", to: "h2", color: "green" },
       { from: "c0", to: "c1", color: "blue", label: "h₀" }, { from: "c1", to: "c2", color: "blue", label: "h₁" }, { from: "c2", to: "out", color: "violet", label: "h₂" } ] },
@@ -174,7 +174,7 @@ var DL_DIAGRAMS = {
     nodes: [
       { id: "t1", x: 20, y: 210, w: 70, h: 44, color: "gray", label: "今日", desc: "入力の単語列（プロンプト）。" }, { id: "t2", x: 100, y: 210, w: 56, h: 44, color: "gray", label: "は", desc: "" }, { id: "t3", x: 166, y: 210, w: 70, h: 44, color: "gray", label: "天気", desc: "" }, { id: "t4", x: 246, y: 210, w: 56, h: 44, color: "gray", label: "が", desc: "" }, { id: "t5", x: 312, y: 210, w: 76, h: 44, color: "amber", label: "？", desc: "ここに来る単語を当てる。" },
       { id: "gpt", x: 20, y: 100, w: 370, h: 70, color: "blue", label: "Transformer デコーダ × N（GPT）", sub: "因果マスク：各語は左側しか見ない", desc: "第11章のブロックに「未来を見ない」マスクを付けたもの。学習時は文中のすべての位置で同時に「次の語」を当てる練習ができる。" },
-      { id: "dist", x: 450, y: 60, w: 200, h: 150, color: "violet", label: "次の単語の確率", sub: "良い 0.41 / 悪い 0.22 / 晴れ 0.15 …", desc: "語彙全体（数万語）に対する softmax。温度を下げると上位に集中、上げると平ら。" },
+      { id: "dist", x: 450, y: 85, w: 200, h: 100, color: "violet", label: "次の単語の確率", sub: "良い 0.41 / 悪い 0.22 / 晴れ 0.15 …", desc: "語彙全体（数万語）に対する softmax。温度を下げると上位に集中、上げると平ら。" },
       { id: "pick", x: 700, y: 110, w: 100, h: 50, color: "green", label: "1 語選ぶ", sub: "最大 or くじ引き", desc: "貪欲法なら最大確率、サンプリングなら確率に従って選ぶ。" },
       { id: "app", x: 700, y: 210, w: 180, h: 44, color: "amber", label: "末尾に足して繰り返す", desc: "選んだ単語を入力列の末尾に追加し、また「次は？」を聞く。<EOS> が出るか上限まで続ける。これが ChatGPT が 1 語ずつ文字を出す理由。" }
     ],

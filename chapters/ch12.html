@@ -31,6 +31,7 @@
   <textarea id="corpus"></textarea>
   <div class="controls">
     <button class="btn btn-small" id="btn-build">文章集を読み込む</button>
+    <button class="btn btn-small" id="btn-corpus12">文章集を元に戻す</button>
     <span class="status" id="st"></span>
   </div>
   <p>下の文の単語をクリックして [MASK] にすると、2 通りの方法で予測します。</p>
@@ -129,7 +130,9 @@
     fill($("left"), predictLeft(s[maskPos - 1]), s[maskPos]);
     fill($("both"), predictBoth(s[maskPos - 1], s[maskPos + 1], s[maskPos + 2]), s[maskPos]);
   }
+  var defaultCorpus = $("corpus").value;
   $("btn-build").addEventListener("click", build);
+  $("btn-corpus12").addEventListener("click", function () { $("corpus").value = defaultCorpus; build(); });
   $("pick").addEventListener("change", function () { maskPos = 1; render(); });
   $("btn-eval").addEventListener("click", function () {
     var n = 0, cl = 0, cb = 0;

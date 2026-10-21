@@ -33,6 +33,7 @@
   <div class="controls">
     <label>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2">2 文字</option><option value="3" selected>3 文字</option><option value="4">4 文字</option></select></label>
     <button class="btn btn-small" id="btn-train">文章を書き換えたら再学習</button>
+    <button class="btn btn-small" id="btn-corpus13">文章を元に戻す</button>
     <span class="status" id="st"></span>
   </div>
   <div class="controls">
@@ -131,7 +132,9 @@
     drawDist(probs(model, $("prompt").value, +$("temp").value));
     DL.log(13, "train", { chars: text.length, order: n });
   }
+  var defaultCorpus = $("corpus").value;
   $("btn-train").addEventListener("click", trainNow);
+  $("btn-corpus13").addEventListener("click", function () { $("corpus").value = defaultCorpus; $("out").textContent = ""; trainNow(); });
   $("order").addEventListener("change", trainNow);
   trainNow();
   $("temp").addEventListener("input", function () { $("tempv").textContent = (+this.value).toFixed(1); if (model) drawDist(probs(model, $("out").textContent || $("prompt").value, +this.value)); });

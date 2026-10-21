@@ -66,6 +66,7 @@ h_t = o * tanh(c_t)</div>
   <h2>体験④：学習済み LSTM のゲートを見る</h2>
   <div class="controls">
     <button class="btn btn-small" id="btn-pre">LSTM を学習して可視化（T=15）</button>
+    <button class="btn btn-small" id="btn-bits7">ビット列を元に戻す</button>
     <span class="status" id="pst"></span>
   </div>
   <div class="tokens" id="bits"></div>
@@ -155,6 +156,8 @@ h_t = o * tanh(c_t)</div>
       if (acc >= 0.98 || s >= 1200) { clearInterval(t); trained = true; btn.disabled = false; $("pst").textContent = "学習完了（" + s + " ステップ）"; show(); DL.log(7, "pretrain", { steps: s, acc: acc }); }
     }, 10);
   });
+  var defaultBits = bits.slice();
+  $("btn-bits7").addEventListener("click", function () { bits = defaultBits.slice(); renderBits(); show(); });
   renderBits(); show();
 
   DL.codePanel("code", { chapter: 7, title: "LSTM · the same task, gates added",

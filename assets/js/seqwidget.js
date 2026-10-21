@@ -20,8 +20,9 @@
     var ctl2 = el("div", { class: "controls" });
     var btn = el("button", { class: "btn btn-small", text: "学習スタート（最大 " + (opts.steps || 1500) + " ステップ）" });
     var stop = el("button", { class: "btn btn-small btn-outline", text: "停止" });
+    var clearBtn = el("button", { class: "btn btn-small btn-outline", text: "記録表を消す" });
     var st = el("span", { class: "status" });
-    ctl2.appendChild(btn); ctl2.appendChild(stop); ctl2.appendChild(st);
+    ctl2.appendChild(btn); ctl2.appendChild(stop); ctl2.appendChild(clearBtn); ctl2.appendChild(st);
     c.appendChild(ctl); c.appendChild(ctl2);
     var row = el("div", { class: "canvas-row" });
     var lossCv = el("canvas", { width: 440, height: 220 }), accCv = el("canvas", { width: 440, height: 220 });
@@ -78,6 +79,7 @@
       stop.onclick = finish;
     }
     btn.addEventListener("click", run);
+    clearBtn.addEventListener("click", function () { while (tbl.rows.length > 1) tbl.deleteRow(1); records = []; });
     DL.lineChart(lossCv, [{ name: "", values: [] }], { emptyText: "「学習スタート」で損失の推移が表示されます" });
     DL.lineChart(accCv, [{ name: "", values: [] }], { emptyText: "「学習スタート」で正答率の推移が表示されます" });
     if (DL.polishUI) DL.polishUI(c);
