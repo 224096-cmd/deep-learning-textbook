@@ -215,8 +215,23 @@ select.code-input { padding: 0 2px; }
   .progress-dots .dot { width: 8px; height: 8px; }
   .site-header h1 { font-size: 1.6rem; }
 }
-/* 広い画面では図を列いっぱいに広げる */
-.canvas-row canvas { width: 100%; }
-@media (min-width: 900px) { main > .card > canvas { width: 100%; } }
+/* ---------- 図の配置ルール ----------
+   ・図は列いっぱいに広がるが、元サイズの 1.25 倍まで（大きくなりすぎない）
+   ・1 枚だけの図は中央寄せ。2 枚以上は .canvas-row で横に並べ、狭い画面では縦に落ちる */
+.card > canvas, .card > .figure > canvas { margin: 0 auto; }
+.card > .canvas-caption { text-align: center; }
+.canvas-row > div { flex: 1 1 400px; }
+.canvas-row > div > p:first-child { margin: 0 0 6px; font-weight: 600; }
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.nav-small { font-size: 0.85rem; font-weight: 500; }
+details.deeper { margin: 10px 0; background: #fff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 6px 14px; }
+details.deeper summary { cursor: pointer; font-weight: 700; color: #6d28d9; }
+details.deeper ul { margin: 6px 0 4px; }
+.glossary-search { width: 100%; max-width: 480px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 1rem; }
+.gl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; margin-top: 12px; }
+.gl-item { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; }
+.gl-item b { font-size: 1.02rem; }
+.gl-item .gl-ch { font-size: 0.78rem; color: var(--accent-dark); text-decoration: none; background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; margin-left: 6px; }
+.gl-item p { margin: 4px 0 0; font-size: 0.92rem; color: #334155; }
 .site-footer .ref { font-size: 0.75rem; color: #9ca3af; max-width: 720px; margin: 6px auto 0; }
 .site-footer .ref a { color: #9ca3af; }

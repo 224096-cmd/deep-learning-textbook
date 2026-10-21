@@ -38,6 +38,7 @@ var DL = (function () {
       else e.setAttribute(k, attrs[k]);
     });
     (children || []).forEach(function (c) { e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    if (tag === "canvas" && typeof hidpi === "function") hidpi(e);
     return e;
   }
   function nowISO() { return new Date().toISOString(); }
@@ -74,6 +75,38 @@ var DL = (function () {
   function relu(x) { return x > 0 ? x : 0; }
   function dot(a, b) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
 
+  /* ---------- 高解像度描画（ぼやけ防止） ----------
+     canvas の内部解像度を devicePixelRatio 倍にし、描画座標はこれまでどおり（論理サイズ）で扱えるようにする */
+  var DPR = Math.min(3, Math.max(1, (window.devicePixelRatio || 1)));
+  function hidpi(cv) {
+    if (cv.__hidpi || !(cv instanceof HTMLCanvasElement)) return cv;
+    var W = cv.width, H = cv.height; cv.__hidpi = true;
+    var apply = function () {
+      HTMLCanvasElement.prototype.__lookupSetter__("width").call(cv, Math.round(W * DPR));
+      HTMLCanvasElement.prototype.__lookupSetter__("height").call(cv, Math.round(H * DPR));
+      cv.style.aspectRatio = W + " / " + H;
+      if (!cv.style.width) cv.style.width = "100%"; cv.style.maxWidth = "min(100%, " + Math.round(W * 1.25) + "px)";
+    };
+    apply();
+    Object.defineProperty(cv, "width", { get: function () { return W; }, set: function (v) { W = v; apply(); }, configurable: true });
+    Object.defineProperty(cv, "height", { get: function () { return H; }, set: function (v) { H = v; apply(); }, configurable: true });
+    var orig = cv.getContext.bind(cv);
+    cv.getContext = function (type, opts) {
+      var c = orig(type, opts);
+      if (c && type === "2d" && !c.__scaled) {
+        c.__scaled = true; c.setTransform(DPR, 0, 0, DPR, 0, 0);
+        // putImageData は変換を無視するので、一度別キャンバスに置いてから drawImage で拡大する
+        c.putImageData = function (img, dx, dy) {
+          var tmp = document.createElement("canvas"); tmp.width = img.width; tmp.height = img.height;
+          tmp.getContext("2d").putImageData(img, 0, 0); c.drawImage(tmp, dx, dy, img.width, img.height);
+        };
+      }
+      return c;
+    };
+    return cv;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("canvas"), hidpi);
+
   /* ---------- 章ナビゲーション ---------- */
   function nav(no) {
     var ch = CHAPTERS[no - 1];
@@ -87,7 +120,7 @@ var DL = (function () {
       el("div", { class: "nav-row" }, [
         el("a", { href: "../index.html", class: "nav-home", text: "← 目次" }),
         el("span", { class: "nav-title", text: "第" + no + "章 " + ch.title }),
-        dots
+        el("span", { class: "nav-right" }, [dots, el("a", { href: "../glossary.html", class: "nav-home nav-small", text: "用語集" })])
       ])
     ]);
     document.body.insertBefore(header, document.body.firstChild);
@@ -128,6 +161,7 @@ var DL = (function () {
       var wrap = el("section", { class: "card card-review" }, [
         el("h2", { text: "ふりかえり：この章の 3 つのポイント" }),
         el("ol", { class: "takeaways" }, C.takeaways.map(function (t) { return el("li", { text: t }); })),
+        C.deeper ? el("details", { class: "deeper" }, [el("summary", { text: "🚀 発展：もっと知りたい人へ" }), el("ul", {}, C.deeper.map(function (t) { return el("li", { text: t }); }))]) : el("span"),
         el("p", { class: "muted", text: "次の小テストで確かめましょう。" })
       ]);
       if (quizCard) main.insertBefore(wrap, quizCard); else main.appendChild(wrap);
@@ -304,7 +338,9 @@ var DL = (function () {
         if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
       });
       ctx.stroke();
-      ctx.fillStyle = ctx.strokeStyle; ctx.textAlign = "left";
+      ctx.fillStyle = ctx.strokeStyle;
+      if (s.values.length <= 40) s.values.forEach(function (v, i) { if (isFinite(v)) { ctx.beginPath(); ctx.arc(px(i), py(v), 3, 0, 7); ctx.fill(); } });
+      ctx.textAlign = "left";
       ctx.fillText(s.name || "", L + 6 + si * 110, T + 10);
     });
   }
