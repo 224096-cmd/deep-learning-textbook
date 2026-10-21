@@ -17,13 +17,13 @@
     学んだモデルは、少しの追加学習（<b>ファインチューニング</b>）で分類・質問応答などに使い回せます。
   </div>
   <p class="video-ref">動画の対応箇所：47:30〜「Transformer, BERT and GPT」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">マスク言語モデル（MLM）</span>：単語の 15% ほどを隠し、元の単語を当てる学習課題。</li>
     <li><span class="term">双方向</span>：穴の左側の文脈と右側の文脈を同時に使うこと。GPT は左側だけ（第13章）。</li>
     <li><span class="term">事前学習 → ファインチューニング</span>：まず大量の文で一般的な言葉の知識を学び、次に少量のラベル付きデータで目的の仕事に合わせる。</li>
     <li><span class="term">[CLS]</span>：文の先頭に付ける特別な記号。その位置の出力を「文全体の要約」として分類に使う。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -45,7 +45,7 @@
       <div class="table-wrap"><table class="data" id="left"></table></div>
     </div>
     <div>
-      <p><b>両側を見る（BERT 型）</b> ― 「直前の次に来やすく、かつ直後の前に来やすい単語」</p>
+      <p><b>両側を見る（BERT 型）</b> ― 「直前の次に来やすく、かつ右側 2 語の前に来やすい単語」</p>
       <div class="table-wrap"><table class="data" id="both"></table></div>
     </div>
   </div>
@@ -59,9 +59,14 @@
     <span class="status" id="evst"></span>
   </div>
   <canvas id="evc" width="520" height="90"></canvas>
-  <div class="table-wrap"><table class="data" id="evtbl"><tr><th>#</th><th>文数</th><th>語彙</th><th>テスト単語数</th><th>左だけ 正答率</th><th>両側 正答率</th></tr></table></div>
-  <div id="export12"></div>
+  <div class="table-wrap scroll"><table class="data" id="evtbl"><tr><th>#</th><th>文数</th><th>語彙</th><th>テスト単語数</th><th>左だけ 正答率</th><th>両側 正答率</th></tr></table></div>
   <div class="note"><b>試してみよう</b>：文章集に自分の文を 10 行ほど足して再テストすると、正答率はどう変わりますか？ 「両側」が「左だけ」に負ける例はありますか（例：文末の単語）？</div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>穴埋め（マスク言語モデル）のコードです。<b>文と [MASK] の位置</b>を書き換えて実行すると、左だけ／両側で予測が変わります。文中の単語は上の文章集に含まれるものを使ってください。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -94,6 +99,7 @@
       s.forEach(function (x, i) {
         uni[x] = (uni[x] || 0) + 1;
         if (i > 0) { big[s[i - 1]] = big[s[i - 1]] || {}; big[s[i - 1]][x] = (big[s[i - 1]][x] || 0) + 1; }
+        if (i > 1) { big2[s[i - 2]] = big2[s[i - 2]] || {}; big2[s[i - 2]][x] = (big2[s[i - 2]][x] || 0) + 1; }   // 2 つ先の単語
       });
     });
     Object.keys(uni).forEach(function (w) { if (w !== "<S>" && w !== "</S>") vocab.push(w); });
@@ -103,7 +109,9 @@
   }
   function P(prev, w) { var c = big[prev] ? (big[prev][w] || 0) : 0; return (c + 0.01) / ((uni[prev] || 0) + 0.01 * vocab.length); }
   function predictLeft(prev) { return vocab.map(function (w) { return { w: w, s: P(prev, w) }; }).sort(function (a, b) { return b.s - a.s; }); }
-  function predictBoth(prev, next) { return vocab.map(function (w) { return { w: w, s: P(prev, w) * P(w, next) }; }).sort(function (a, b) { return b.s - a.s; }); }
+  function P2(w, next2) { var c = big2[w] ? (big2[w][next2] || 0) : 0; return (c + 0.01) / ((uni[w] || 0) + 0.01 * vocab.length); }
+  // 両側：左隣 → w、w → 右隣、w → 2 つ右（右側の文脈を 2 語分使う）
+  function predictBoth(prev, next, next2) { return vocab.map(function (w) { return { w: w, s: P(prev, w) * P(w, next) * (next2 ? P2(w, next2) : 1) }; }).sort(function (a, b) { return b.s - a.s; }); }
   function fill(tbl, list, truth) {
     tbl.innerHTML = "<tr><th>順位</th><th>予測</th><th>スコア</th></tr>";
     var tot = list.reduce(function (a, b) { return a + b.s; }, 0);
@@ -118,22 +126,44 @@
       c.appendChild(t);
     });
     fill($("left"), predictLeft(s[maskPos - 1]), s[maskPos]);
-    fill($("both"), predictBoth(s[maskPos - 1], s[maskPos + 1]), s[maskPos]);
+    fill($("both"), predictBoth(s[maskPos - 1], s[maskPos + 1], s[maskPos + 2]), s[maskPos]);
   }
   $("btn-build").addEventListener("click", build);
   $("pick").addEventListener("change", function () { maskPos = 1; render(); });
   $("btn-eval").addEventListener("click", function () {
     var n = 0, cl = 0, cb = 0;
-    sents.forEach(function (s) { for (var i = 1; i < s.length - 1; i++) { n++; if (predictLeft(s[i - 1])[0].w === s[i]) cl++; if (predictBoth(s[i - 1], s[i + 1])[0].w === s[i]) cb++; } });
+    sents.forEach(function (s) { for (var i = 1; i < s.length - 1; i++) { n++; if (predictLeft(s[i - 1])[0].w === s[i]) cl++; if (predictBoth(s[i - 1], s[i + 1], s[i + 2])[0].w === s[i]) cb++; } });
     var rec = { run: records.length + 1, sentences: sents.length, vocab: vocab.length, tested: n, left_only_acc: +(cl / n).toFixed(4), both_sides_acc: +(cb / n).toFixed(4) };
     records.push(rec); DL.log(12, "eval", rec);
     DL.barChart($("evc"), [{ label: "左だけ（GPT 型）", value: cl / n, color: "#dc2626" }, { label: "両側（BERT 型）", value: cb / n, color: "#2563eb" }], { vmax: 1, left: 130, format: function (v) { return (v * 100).toFixed(1) + "%"; } });
-    var tr = document.createElement("tr"); tr.innerHTML = "<td>" + rec.run + "</td><td>" + rec.sentences + "</td><td>" + rec.vocab + "</td><td>" + rec.tested + "</td><td>" + (rec.left_only_acc * 100).toFixed(1) + "%</td><td>" + (rec.both_sides_acc * 100).toFixed(1) + "%</td>"; $("evtbl").appendChild(tr);
+    var tr = document.createElement("tr"); tr.innerHTML = "<td>" + rec.run + "</td><td>" + rec.sentences + "</td><td>" + rec.vocab + "</td><td>" + rec.tested + "</td><td>" + (rec.left_only_acc * 100).toFixed(1) + "%</td><td>" + (rec.both_sides_acc * 100).toFixed(1) + "%</td>"; $("evtbl").insertBefore(tr, $("evtbl").rows[1] || null);
     $("evst").textContent = "テスト " + n + " 語：左だけ " + (cl / n * 100).toFixed(1) + "%、両側 " + (cb / n * 100).toFixed(1) + "%";
   });
-  DL.exportButtons("export12", function () { return records; }, ["run", "sentences", "vocab", "tested", "left_only_acc", "both_sides_acc"], "ch12_bert_mlm", 12);
   build();
 
+  DL.codePanel("code", { chapter: 12, title: "BERT · fill in the [MASK]",
+    code: [
+      "text = \"{{text}}\"",
+      "words = text.split()",
+      "pos = words.index(\"[MASK]\")",
+      "left  = words[pos - 1]                   # 穴の左の単語",
+      "right = words[pos + 1]                   # 穴の右の単語",
+      "p_left = count(left, w)                  # GPT 型：左だけ見る",
+      "p_both = count(left, w) * count(w, right) # BERT 型：両側を見る",
+      "print(\"left only :\", top3(p_left))",
+      "print(\"both sides:\", top3(p_both))"
+    ],
+    params: { text: { type: "text", value: "私 は 朝 に [MASK] を 飲む" } },
+    run: function (p, out) {
+      var w = ["<S>"].concat(p.text.trim().split(/\s+/), ["</S>"]), pos = w.indexOf("[MASK]");
+      if (pos < 0) { out.print("[MASK] がありません"); return; }
+      var L = predictLeft(w[pos - 1]).slice(0, 3), B = predictBoth(w[pos - 1], w[pos + 1], w[pos + 2]).slice(0, 3);
+      var fmt = function (list) { var tot = list.reduce(function (a, b) { return a + b.s; }, 0); return list.map(function (o) { return o.w + " " + (o.s / tot * 100).toFixed(0) + "%"; }).join(",  "); };
+      out.print("left only : " + fmt(L));
+      out.print("both sides: " + fmt(B));
+      out.print(L[0].w !== B[0].w ? "→ 右側の「" + w[pos + 1] + " " + (w[pos + 2] === "</S>" ? "" : w[pos + 2]) + "」まで見ることで予測が変わった" : "→ この文では左だけでも同じ予測");
+    }
+  });
   DL.quiz("quiz12", 12, [
     { q: "BERT の事前学習課題は？", choices: ["次の単語を当てる", "隠した単語を前後の文脈から当てる（穴埋め）", "翻訳する", "画像を分類する"], answer: 1 },
     { q: "BERT が「双方向」と呼ばれる理由は？", choices: ["2 つのモデルを使うから", "穴の左右両方の文脈を同時に使って予測するから", "文を 2 回読むから", "英語と日本語を扱うから"], answer: 1 },

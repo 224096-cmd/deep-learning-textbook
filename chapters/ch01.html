@@ -16,18 +16,32 @@
     この章では、点を 2 色に分ける問題を使って、<b>重みを少しずつ直して直線を動かす</b>学習の様子を見ます。
   </div>
   <p class="video-ref">動画の対応箇所：01:08〜「Perceptron and MLP」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">重み（weight, w）</span>：各入力をどれだけ重視するかを表す数。学習で変わる。</li>
     <li><span class="term">バイアス（bias, b）</span>：しきい値を動かすための「下駄」。これも学習で変わる。</li>
     <li><span class="term">決定境界</span>：出力が 0 と 1 で切り替わる線。2 入力なら <span class="mono">w1·x1 + w2·x2 + b = 0</span> の直線。</li>
     <li><span class="term">エポック</span>：訓練データを 1 周すること。</li>
-  </ul>
+  </ul></details>
   <div class="code">// パーセプトロンの計算（1 個のニューロン）
 z = w1*x1 + w2*x2 + b
 y = (z &gt; 0) ? 1 : 0
 // 学習則：間違えたときだけ重みを直す
 w ← w + 学習率 × (正解 − 出力) × 入力</div>
+</section>
+
+<section class="card">
+  <h2>まず：ニューロン 1 個の中で何が起きているか</h2>
+  <div class="canvas-row">
+    <div>
+      <canvas id="neuron" width="520" height="220"></canvas>
+      <p class="canvas-caption">左の 2 つの入力（x1, x2）に重みを掛けて足し、しきい値と比べて 0 か 1 を出す。青い光＝計算の流れ（順伝播）、赤い光＝間違えたときに重みを直す流れ。</p>
+    </div>
+    <div>
+      <p>体験①で「1 サンプル学習」を押すたびに、この図にも光が流れます。ノードの色＝そのときの値（青＝正、赤＝負）。</p>
+      <button class="btn btn-small" id="btn-neuron">光の流れをもう一度見る</button>
+    </div>
+  </div>
 </section>
 
 <section class="card">
@@ -59,7 +73,6 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
         <tr><th>w1</th><th>w2</th><th>b</th><th>エポック</th><th>正答率</th></tr>
         <tr><td id="w1">-</td><td id="w2">-</td><td id="b">-</td><td id="ep">0</td><td id="accv">-</td></tr>
       </table>
-      <div id="export1"></div>
     </div>
   </div>
   <div class="note">
@@ -77,6 +90,12 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
     <span class="status" id="manual-status"></span>
   </div>
   <p class="muted">スライダーを動かすと体験①の直線が直接動きます。学習とは「このスライダーをデータに合わせて自動で調整すること」です。</p>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>動画と同じく、パーセプトロンの学習ループを Python 風に書きました。<b>問題（AND / XOR など）、学習率、ステップ数</b>を書き換えて実行すると、上の図も一緒に更新されます。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -121,6 +140,8 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
     var lr = parseFloat($("lr").value);
     var p = pts[cursor % pts.length]; cursor++;
     var err = p.t - predict(p);
+    anim.setActs([[p.x, p.y], [predict(p)]]);
+    anim.pulse(err !== 0 ? "both" : "fwd");
     if (err !== 0) { w[0] += lr * err * p.x; w[1] += lr * err * p.y; b += lr * err; }
     if (cursor % pts.length === 0) endEpoch();
   }
@@ -135,6 +156,8 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
     for (var i = 0; i < n; i++) learnOne();
   }
 
+  var anim = DL.netAnim($("neuron"), { layers: [2, 1], labels: ["入力 x1, x2", "出力 y"], speed: 1.6 });
+  $("btn-neuron").addEventListener("click", function () { anim.pulse("both"); });
   var cv = $("plane"), ctx = cv.getContext("2d");
   function toPx(x) { return (x + 1) / 2 * cv.width; }
   function toPy(y) { return (1 - (y + 1) / 2) * cv.height; }
@@ -168,6 +191,10 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
       if (i === cursor % pts.length) { ctx.strokeStyle = "#f59e0b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(toPx(p.x), toPy(p.y), 10, 0, Math.PI * 2); ctx.stroke(); }
     });
     ctx.lineWidth = 1;
+    DL.legend(cv, [{ color: "#2563eb", label: "正解 = 1（青）" }, { color: "#dc2626", label: "正解 = 0（赤）" }, { color: "#111827", label: "決定境界（黒線）" }, { color: "#f59e0b", label: "いま見ているサンプル" }]);
+    ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.fillRect(6, cv.height - 26, 300, 20); ctx.fillStyle = "#1f2430"; ctx.font = "12px monospace"; ctx.textAlign = "left";
+    ctx.fillText("境界: " + w[0].toFixed(2) + "·x1 + " + w[1].toFixed(2) + "·x2 + " + b.toFixed(2) + " = 0", 10, cv.height - 12);
+    ctx.fillStyle = "#6b7280"; ctx.font = "11px sans-serif"; ctx.fillText("x1 →", cv.width - 40, toPy(0) - 6); ctx.fillText("x2 ↑", toPx(0) + 6, 14);
     // 表
     $("w1").textContent = w[0].toFixed(3); $("w2").textContent = w[1].toFixed(3); $("b").textContent = b.toFixed(3);
     $("ep").textContent = epoch; $("accv").textContent = (accuracy() * 100).toFixed(1) + "%";
@@ -188,10 +215,10 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
   $("btn-step").addEventListener("click", function () { learnOne(); syncSliders(); draw(); });
   $("btn-epoch").addEventListener("click", function () { learnEpoch(); syncSliders(); draw(); DL.log(1, "epoch", { epoch: epoch, accuracy: accuracy() }); });
   $("btn-auto").addEventListener("click", function () {
-    var btn = this, k = 0; btn.disabled = true;
+    var btn = this, k = 0; btn.disabled = true; btn.classList.add("running"); anim.start();
     var t = setInterval(function () {
       learnEpoch(); syncSliders(); draw(); k++;
-      if (k >= 20 || accuracy() === 1) { clearInterval(t); btn.disabled = false; DL.log(1, "auto_train", { dataset: $("dataset").value, epochs: epoch, accuracy: accuracy() }); }
+      if (k >= 20 || accuracy() === 1) { clearInterval(t); btn.disabled = false; btn.classList.remove("running"); anim.stop(); DL.log(1, "auto_train", { dataset: $("dataset").value, epochs: epoch, accuracy: accuracy() }); }
     }, 120);
   });
   ["mw1", "mw2", "mb"].forEach(function (id) {
@@ -201,10 +228,36 @@ w ← w + 学習率 × (正解 − 出力) × 入力</div>
       draw();
     });
   });
-  DL.exportButtons("export1", function () { return records; }, ["dataset", "epoch", "w1", "w2", "b", "accuracy"], "ch01_perceptron", 1);
 
   makeData("blobs"); resetW(); draw();
 
+  DL.codePanel("code", { chapter: 1, title: "perceptron · the training loop",
+    code: [
+      "X = [[0,0], [0,1], [1,0], [1,1]]          # 4 つの入力",
+      "y = {{dataset}}                          # 正解（AND: 両方1のときだけ1）",
+      "w = [0.0, 0.0]; b = 0.0                 # 重みとバイアスの初期値",
+      "lr = {{lr}}                            # 学習率",
+      "for step in range({{steps}}):           # 学習ループ",
+      "    for x, t in zip(X, y):",
+      "        out = 1 if w[0]*x[0] + w[1]*x[1] + b > 0 else 0",
+      "        err = t - out                    # 間違えたときだけ 0 以外",
+      "        w[0] += lr * err * x[0]; w[1] += lr * err * x[1]; b += lr * err",
+      "print(\"w =\", w, \"b =\", b)",
+      "print(\"mistakes =\", sum(間違えた数))"
+    ],
+    params: { dataset: { type: "select", options: ["AND", "OR", "XOR", "blobs"], value: "AND" }, lr: { value: 0.5, min: 0.01, max: 2, step: 0.05 }, steps: { value: 20, min: 1, max: 200, step: 1 } },
+    run: function (p, out) {
+      var map = { AND: "and", OR: "or", XOR: "xor", blobs: "blobs" };
+      $("dataset").value = map[p.dataset]; makeData(map[p.dataset]); w = [0, 0]; b = 0; epoch = 0; accHist = []; records = [];
+      $("lr").value = Math.min(1, p.lr); $("lrv").textContent = parseFloat($("lr").value).toFixed(2);
+      for (var i = 0; i < p.steps; i++) learnEpoch();
+      syncSliders(); draw();
+      var mistakes = 0; pts.forEach(function (q) { if (predict(q) !== q.t) mistakes++; });
+      out.print("w = [" + w[0].toFixed(3) + ", " + w[1].toFixed(3) + "] b = " + b.toFixed(3));
+      out.print("mistakes = " + mistakes + " / " + pts.length + (mistakes === 0 ? "   ← 全部正解！" : (p.dataset === "XOR" ? "   ← XOR は直線 1 本では分けられない" : "   ← ステップ数や学習率を変えてみよう")));
+      out.print("accuracy = " + (accuracy() * 100).toFixed(1) + "%");
+    }
+  });
   DL.quiz("quiz1", 1, [
     { q: "パーセプトロンの出力を決めるのは次のうちどれ？", choices: ["入力の平均", "重み付き和がしきい値を超えたかどうか", "入力の最大値", "入力の個数"], answer: 1, explain: "z = Σ w·x + b を計算し、0 より大きいかで 0/1 を決めます。" },
     { q: "パーセプトロンが XOR を学習できない理由は？", choices: ["データが少なすぎる", "学習率が小さすぎる", "1 本の直線では 2 色を分けられない", "エポック数が足りない"], answer: 2, explain: "線形分離不可能な問題は、どんなに学習しても直線 1 本では解けません。" },

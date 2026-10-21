@@ -132,3 +132,56 @@ table.data td:first-child, table.data th:first-child { text-align: left; }
 .gen-out { min-height: 3em; background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-family: Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
 .status { font-size: 0.9rem; color: var(--muted); }
 textarea { width: 100%; min-height: 90px; border: 1px solid var(--border); border-radius: 8px; padding: 8px; font-family: inherit; }
+
+/* ---------- UI 改善 ---------- */
+.site-header.sticky { position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.progress-dots { display: flex; gap: 5px; align-items: center; }
+.progress-dots .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.35); display: inline-block; }
+.progress-dots .dot.done { background: rgba(255,255,255,0.8); }
+.progress-dots .dot.current { background: #fbbf24; width: 14px; height: 14px; }
+.progress-dots .dot:hover { outline: 2px solid #fff; }
+.table-wrap.scroll { max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.table-wrap.scroll table { margin: 0; }
+.table-wrap.scroll th { position: sticky; top: 0; background: #f3f4f6; z-index: 1; }
+.controls input[type="range"] { width: 160px; height: 28px; accent-color: var(--accent); }
+.controls label { background: #f9fafb; border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; }
+.btn { transition: transform 0.05s, background 0.15s; }
+.btn:active { transform: scale(0.97); }
+.btn.running { background: #b91c1c; }
+.card h2 { display: flex; align-items: center; gap: 8px; }
+.card h2::before { content: ""; width: 6px; height: 1.1em; background: var(--accent); border-radius: 3px; display: inline-block; }
+details.terms summary { cursor: pointer; font-weight: bold; color: var(--accent); padding: 6px 0; }
+details.terms[open] summary { margin-bottom: 4px; }
+.hint { font-size: 0.85rem; color: var(--muted); margin: 4px 0 0; }
+@media (max-width: 600px) {
+  .controls { gap: 8px; }
+  .controls label { width: 100%; justify-content: space-between; }
+  .controls input[type="range"] { width: 45%; }
+  .nav-title { font-size: 0.9rem; }
+  .progress-dots .dot { width: 8px; height: 8px; }
+  .card { padding: 14px; }
+}
+
+/* ---------- コードパネル ---------- */
+.codepanel { background: #0f172a; border-radius: 12px; padding: 0 0 10px; color: #e2e8f0; margin: 10px 0; overflow: hidden; }
+.code-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; background: #1e293b; font-size: 0.9rem; flex-wrap: wrap; gap: 6px; }
+.code-title { font-weight: bold; color: #fbbf24; }
+.code-hint { color: #94a3b8; font-size: 0.8rem; }
+.code-body { padding: 10px 0; overflow-x: auto; font-family: Consolas, "Courier New", monospace; font-size: 0.86rem; line-height: 1.75; }
+.code-line { display: flex; white-space: pre; padding: 0 12px; border-left: 3px solid transparent; }
+.code-line.active { background: #1e3a5f; border-left-color: #fbbf24; }
+.code-ln { width: 2em; color: #475569; text-align: right; margin-right: 12px; user-select: none; flex: none; }
+.code-content { flex: 1; }
+.c-kw { color: #c084fc; } .c-str { color: #86efac; } .c-num { color: #fcd34d; } .c-com { color: #64748b; }
+.code-input { font-family: inherit; font-size: inherit; background: #334155; color: #fde68a; border: 1px solid #fbbf24; border-radius: 4px; padding: 0 4px; margin: 0 1px; height: 1.5em; vertical-align: middle; }
+.code-input:focus { outline: 2px solid #fbbf24; background: #475569; }
+select.code-input { padding: 0 2px; }
+.code-bar { display: flex; gap: 8px; align-items: center; padding: 6px 14px; }
+.code-run { background: #16a34a; } .code-run:hover { background: #15803d; }
+.codepanel .btn-outline { color: #cbd5e1; border-color: #64748b; } .codepanel .btn-outline:hover { background: #1e293b; }
+.code-status { color: #94a3b8; font-size: 0.85rem; }
+.code-out { margin: 4px 14px 0; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; position: relative; }
+.code-out-label { position: absolute; right: 10px; top: 6px; color: #64748b; font-size: 0.75rem; font-style: italic; }
+.code-out-text { margin: 0; font-family: Consolas, "Courier New", monospace; font-size: 0.86rem; color: #e2e8f0; white-space: pre-wrap; word-break: break-all; min-height: 1.6em; }
+.code-out-text .hl { color: #fbbf24; font-weight: bold; }
+.code-fig { margin-left: auto; color: #93c5fd; font-size: 0.85rem; text-decoration: none; } .code-fig:hover { text-decoration: underline; }

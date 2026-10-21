@@ -20,14 +20,14 @@
   <div class="code">score_i = Q · K_i                 似ている度合い（内積）
 w_i     = softmax(score)_i        合計 1 の重みにする
 出力    = Σ w_i · V_i              重みで値を混ぜる</div>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">Query（Q）</span>：「いま何を探しているか」。デコーダ側の状態から作る。</li>
     <li><span class="term">Key（K）</span>：「私はこういう情報です」という各入力の見出し。Q と比べられる。</li>
     <li><span class="term">Value（V）</span>：実際に取り出す中身。K とペアになっている。</li>
     <li><span class="term">softmax</span>：数の列を、全部正で合計 1 の「割合」に変える関数。大きい数ほど大きな割合になる。</li>
     <li><span class="term">アライメント</span>：出力の各単語が入力のどの単語に注目したかの対応表（ヒートマップで描ける）。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -45,8 +45,9 @@ w_i     = softmax(score)_i        合計 1 の重みにする
       <div class="table-wrap"><table class="data" id="atbl"></table></div>
       <canvas id="wbar" width="400" height="160"></canvas>
       <p class="canvas-caption">softmax 後の重み（合計 1）</p>
+      <canvas id="flow" width="400" height="150"></canvas>
+      <p class="canvas-caption">各 Value から出力へ流れる光。太さと速さ＝重みの大きさ。重みの大きい Key の情報ほど多く出力に混ざる。</p>
       <p class="status" id="out"></p>
-      <div id="export10"></div>
     </div>
   </div>
   <div class="note"><b>試してみよう</b>：①Query を 1 つの Key に重ねると重みがその Key に集中します。②温度を小さくすると 1 点集中（ほぼ one-hot）、大きくすると平均化。実際の Transformer では内積を √d で割る「スケール」がこの温度に当たります。</div>
@@ -65,6 +66,12 @@ w_i     = softmax(score)_i        合計 1 の重みにする
   <div class="tokens" id="src"></div>
   <canvas id="align" width="520" height="300"></canvas>
   <p class="canvas-caption">行＝出力単語、列＝入力単語。語順が違う言語でも、必要な単語に直接「注目」できる（デモ用に用意した重み）。</p>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>Attention の 3 ステップ（スコア → softmax → 重み付き和）をそのままコードにしました。<b>Query の値や温度</b>を書き換えて実行すると、上の図の矢印も動きます。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -111,6 +118,20 @@ w_i     = softmax(score)_i        合計 1 の重みにする
     records.push({ qx: +q[0].toFixed(3), qy: +q[1].toFixed(3), temp: +$("temp").value, w1: +r.w[0].toFixed(4), w2: +r.w[1].toFixed(4), w3: +r.w[2].toFixed(4), w4: +r.w[3].toFixed(4), out_x: +r.out[0].toFixed(3), out_y: +r.out[1].toFixed(3) });
     if (records.length > 500) records.shift();
   }
+  // 流れのアニメーション
+  var fcv = $("flow"), fctx = fcv.getContext("2d"), ph = 0;
+  (function flowFrame() {
+    var r = compute(); fctx.clearRect(0, 0, fcv.width, fcv.height);
+    var ox = fcv.width - 50, oy = fcv.height / 2;
+    keys.forEach(function (k, i) {
+      var sy = 20 + i * (fcv.height - 40) / 3, sx = 40;
+      fctx.strokeStyle = k.c; fctx.lineWidth = 1 + r.w[i] * 10; fctx.globalAlpha = 0.25; fctx.beginPath(); fctx.moveTo(sx, sy); fctx.lineTo(ox, oy); fctx.stroke(); fctx.globalAlpha = 1;
+      fctx.fillStyle = k.c; fctx.font = "12px sans-serif"; fctx.textAlign = "right"; fctx.fillText("V" + (i + 1), sx - 6, sy + 4);
+      for (var d = 0; d < 3; d++) { var f = ((ph * (0.3 + r.w[i])) + d / 3) % 1; fctx.beginPath(); fctx.arc(sx + (ox - sx) * f, sy + (oy - sy) * f, 2 + r.w[i] * 6, 0, 7); fctx.fill(); }
+    });
+    fctx.fillStyle = "#111827"; fctx.beginPath(); fctx.arc(ox, oy, 12, 0, 7); fctx.fill(); fctx.fillStyle = "#fff"; fctx.textAlign = "center"; fctx.fillText("出力", ox, oy + 4);
+    ph += 0.01; requestAnimationFrame(flowFrame);
+  })();
   function pos(e) { var r = cv.getBoundingClientRect(); var t = e.touches ? e.touches[0] : e; return [((t.clientX - r.left) * cv.width / r.width - cx) / S, -((t.clientY - r.top) * cv.height / r.height - cy) / S]; }
   function down(e) {
     var p = pos(e), best = null, bd = 0.15;
@@ -124,7 +145,6 @@ w_i     = softmax(score)_i        合計 1 の重みにする
   cv.addEventListener("mousedown", down); cv.addEventListener("mousemove", move); window.addEventListener("mouseup", up);
   cv.addEventListener("touchstart", down, { passive: false }); cv.addEventListener("touchmove", move, { passive: false }); window.addEventListener("touchend", up);
   $("temp").addEventListener("input", function () { $("tempv").textContent = (+this.value).toFixed(1); draw(); });
-  DL.exportButtons("export10", function () { return records; }, ["qx", "qy", "temp", "w1", "w2", "w3", "w4", "out_x", "out_y"], "ch10_attention", 10);
   draw();
 
   // --- アライメント ---
@@ -147,6 +167,28 @@ w_i     = softmax(score)_i        合計 1 の重みにする
   $("ex").addEventListener("change", function () { sel = 0; renderAlign(); });
   renderAlign();
 
+  DL.codePanel("code", { chapter: 10, title: "attention · score, softmax, mix",
+    code: [
+      "q = [{{qx}}, {{qy}}]                      # Query：探しているもの",
+      "K = [K1, K2, K3, K4]                    # Key：上の図の 4 本の矢印",
+      "V = [[1,0], [0,1], [-1,0], [0,-1]]      # Value：取り出す中身",
+      "scores = [dot(q, k) for k in K]         # 1. 似ている度合い",
+      "weights = softmax(scores / {{temp}})     # 2. 合計 1 の重みに",
+      "output = sum(w * v for w, v in zip(weights, V))   # 3. 重みで混ぜる",
+      "print(\"weights =\", weights)",
+      "print(\"output  =\", output)"
+    ],
+    params: { qx: { value: 0.6, min: -1.3, max: 1.3, step: 0.1 }, qy: { value: 0.6, min: -1.3, max: 1.3, step: 0.1 }, temp: { value: 1, min: 0.1, max: 3, step: 0.1 } },
+    run: function (p, out) {
+      q = [p.qx, p.qy]; $("temp").value = p.temp; $("tempv").textContent = p.temp.toFixed(1); draw();
+      var r = compute();
+      out.print("scores  = [" + r.scores.map(function (v) { return v.toFixed(2); }).join(", ") + "]");
+      out.print("weights = [" + r.w.map(function (v) { return v.toFixed(2); }).join(", ") + "]   sum = " + r.w.reduce(function (a, b) { return a + b; }, 0).toFixed(2));
+      out.print("output  = [" + r.out[0].toFixed(2) + ", " + r.out[1].toFixed(2) + "]");
+      var mx = r.w.indexOf(Math.max.apply(null, r.w));
+      out.print("→ K" + (mx + 1) + " に " + (r.w[mx] * 100).toFixed(0) + "% の注意" + (p.temp < 0.5 ? "（温度が低いので 1 点集中）" : p.temp > 2 ? "（温度が高いのでほぼ平均）" : ""));
+    }
+  });
   DL.quiz("quiz10", 10, [
     { q: "Attention の重みが「合計 1」になるのはどの計算のおかげ？", choices: ["内積", "softmax", "tanh", "足し算"], answer: 1 },
     { q: "Query と Key の役割は？", choices: ["Query＝探しているもの、Key＝各入力の見出し。内積で似ている度合いを測る", "Query＝正解、Key＝予測", "どちらも同じもの", "Query＝入力、Key＝出力"], answer: 0 },

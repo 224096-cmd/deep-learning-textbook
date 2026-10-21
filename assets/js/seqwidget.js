@@ -30,9 +30,7 @@
     c.appendChild(row);
     var tbl = el("table", { class: "data" });
     tbl.innerHTML = "<tr><th>モデル</th><th>T</th><th>隠れ</th><th>パラメータ数</th><th>最適化</th><th>学習率</th><th>解けたステップ</th><th>最終正答率</th><th>最終損失</th></tr>";
-    c.appendChild(el("div", { class: "table-wrap" }, [tbl]));
-    var exp = el("div", { id: id("exp") }); c.appendChild(exp);
-    DL.exportButtons(id("exp"), function () { return records; }, ["model", "T", "hidden", "params", "optimizer", "lr", "solved_step", "final_acc", "final_loss"], "ch" + (chapter < 10 ? "0" : "") + chapter + "_memory_race", chapter);
+    c.appendChild(el("div", { class: "table-wrap scroll" }, [tbl]));
 
     $(id("T")).addEventListener("input", function () { $(id("Tv")).textContent = this.value; });
     $(id("H")).addEventListener("input", function () { $(id("Hv")).textContent = this.value; });
@@ -73,7 +71,7 @@
           records.push(rec); DL.log(chapter, "race", rec);
           var tr = document.createElement("tr");
           tr.innerHTML = ["model", "T", "hidden", "params", "optimizer", "lr", "solved_step", "final_acc", "final_loss"].map(function (k) { return "<td>" + rec[k] + "</td>"; }).join("");
-          tbl.appendChild(tr);
+          tbl.insertBefore(tr, tbl.rows[1] || null);
         });
         st.textContent += " ／ 終了";
       }

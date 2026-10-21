@@ -23,13 +23,13 @@ Q = X·Wq,  K = X·Wk,  V = X·Wv            （ヘッドごとに別の W）
 A = softmax( Q·Kᵀ / √d )                  全単語 × 全単語 の注意の表
 X  = X + A·V                              残差接続（第4章）
 X  = X + FFN(X)                           各単語ごとの小さな MLP（第2章）</div>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">自己注意</span>：Query も Key も Value も同じ文から作る Attention。文中の単語同士の関係を取り出す。</li>
     <li><span class="term">マルチヘッド</span>：Attention を h 組並列に行う。ヘッドごとに「主語と動詞」「代名詞と指す先」など別の関係を見る。</li>
     <li><span class="term">位置エンコーディング</span>：単語の位置を表すベクトル。sin・cos の波を使うと、どんな長さでも作れる。</li>
     <li><span class="term">√d でのスケール</span>：次元が大きいと内積が大きくなりすぎ softmax が尖るので、割って調整する。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -42,9 +42,10 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
     <button class="btn btn-small" id="btn-shuffle">単語順を入れ替える</button>
     <button class="btn btn-small" id="btn-reseed">重みの乱数を変える</button>
   </div>
+  <canvas id="arcs" width="860" height="230"></canvas>
+  <p class="canvas-caption">ヘッド 1 の自己注意を動かして見る：黄色の単語（Query）が、文中の全単語（Key）から情報を集める。線の太さ＝重み。Query は自動で順に切り替わる。</p>
   <div class="canvas-row" id="headrow"></div>
   <p class="canvas-caption">行＝Query の単語、列＝Key の単語。各行の合計は 1。（重みは学習していない乱数なので、関係は「それらしい」とは限りません。構造を見るための実験です）</p>
-  <div id="export11"></div>
   <div class="note">
     <b>試してみよう</b>：位置エンコーディングの✓を外して「単語順を入れ替える」と、各単語の行の中身（数値の集合）は<b>入れ替わるだけで同じ</b>になります。
     Attention 自体は語順を知らない（順番を入れ替えても同じ結果が並び替わるだけ）ので、位置の情報を別に足す必要があるのです。
@@ -72,6 +73,12 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
 </section>
 
 <section class="card">
+  <h2>コードで動かす</h2>
+  <p>自己注意の計算そのもの。<b>文、ヘッド数、因果マスク（未来を見ない）</b>を変えて実行すると、上のヒートマップと弧のアニメが更新されます。</p>
+  <div id="code"></div>
+</section>
+
+<section class="card">
   <h2>小テスト</h2>
   <div id="quiz11"></div>
 </section>
@@ -82,7 +89,26 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
 (function () {
   DL.nav(11);
   var $ = DL.$;
-  var D = 16, seed = 1234, records = [];
+  var D = 16, seed = 1234, records = [], arcData = null, arcQ = 0, arcPh = 0;
+  (function arcFrame() {
+    var cv = $("arcs"), c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height);
+    if (arcData) {
+      var words = arcData.words, A = arcData.A, n = words.length, gap = Math.min(110, (cv.width - 80) / Math.max(1, n - 1)), x0 = (cv.width - gap * (n - 1)) / 2, y = 170;
+      var qi = arcQ % n;
+      for (var j = 0; j < n; j++) {
+        var w = A[qi][j], xa = x0 + qi * gap, xb = x0 + j * gap;
+        if (j === qi) continue;
+        c.strokeStyle = "rgba(37,99,235," + (0.15 + w * 0.85) + ")"; c.lineWidth = 1 + w * 12; c.beginPath(); c.moveTo(xb, y - 18); c.quadraticCurveTo((xa + xb) / 2, y - 40 - Math.abs(xa - xb) * 0.5, xa, y - 18); c.stroke();
+        var f = arcPh % 1, mx = (xa + xb) / 2, my = y - 40 - Math.abs(xa - xb) * 0.5;
+        var px = (1 - f) * (1 - f) * xb + 2 * (1 - f) * f * mx + f * f * xa, py = (1 - f) * (1 - f) * (y - 18) + 2 * (1 - f) * f * my + f * f * (y - 18);
+        c.fillStyle = "#2563eb"; c.beginPath(); c.arc(px, py, 2 + w * 7, 0, 7); c.fill();
+      }
+      c.font = "14px sans-serif"; c.textAlign = "center";
+      for (j = 0; j < n; j++) { var x = x0 + j * gap; c.fillStyle = j === qi ? "#fbbf24" : "#f3f4f6"; c.strokeStyle = "#9ca3af"; c.beginPath(); c.roundRect ? c.roundRect(x - 34, y - 14, 68, 30, 6) : c.rect(x - 34, y - 14, 68, 30); c.fill(); c.stroke(); c.fillStyle = "#1f2430"; c.fillText(words[j], x, y + 6); c.fillStyle = "#6b7280"; c.font = "11px sans-serif"; c.fillText((A[qi][j] * 100).toFixed(0) + "%", x, y + 32); c.font = "14px sans-serif"; }
+      arcPh += 0.012; if (arcPh >= 1) { arcPh = 0; arcQ++; }
+    }
+    requestAnimationFrame(arcFrame);
+  })();
   function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; }
   function embed(word) { var r = new DL.RNG(hash(word)); var v = []; for (var k = 0; k < D; k++) v.push(r.gauss()); return v; }
   function posEnc(p, d) { var v = []; for (var k = 0; k < d; k++) { var f = Math.pow(10000, -Math.floor(k / 2) * 2 / d); v.push(k % 2 === 0 ? Math.sin(p * f) : Math.cos(p * f)); } return v; }
@@ -105,6 +131,7 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
       var wrap = DL.el("div", {}, [DL.el("p", { html: "<b>ヘッド " + (h + 1) + "</b>" }), cv]);
       row.appendChild(wrap);
       DL.heatmap(cv, A, words, words, { vmin: 0, vmax: 1, showValues: true, left: 70, top: 40 });
+      if (h === 0) arcData = { words: words, A: A };
       rec["head" + (h + 1) + "_row1"] = A[0].map(function (v) { return v.toFixed(2); }).join(" ");
     }
     records.push(rec); if (records.length > 200) records.shift();
@@ -113,7 +140,6 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   $("sent").addEventListener("input", compute);
   $("btn-shuffle").addEventListener("click", function () { var w = $("sent").value.trim().split(/\s+/); for (var i = w.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = w[i]; w[i] = w[j]; w[j] = t; } $("sent").value = w.join(" "); compute(); DL.log(11, "shuffle", { pe: $("pe").checked }); });
   $("btn-reseed").addEventListener("click", function () { seed = Math.floor(Math.random() * 1e9); compute(); });
-  DL.exportButtons("export11", function () { return records; }, Object.keys(records[0] || { sentence: 1, heads: 1, pos_enc: 1, causal: 1, head1_row1: 1, head2_row1: 1 }), "ch11_self_attention", 11);
   compute();
 
   function drawPE() {
@@ -130,6 +156,35 @@ X  = X + FFN(X)                           各単語ごとの小さな MLP（第2
   }
   $("nlen").addEventListener("input", cost); cost();
 
+  DL.codePanel("code", { chapter: 11, title: "self-attention · the code",
+    code: [
+      "words = \"{{sent}}\".split()",
+      "X = embed(words) + positional_encoding(len(words))",
+      "def attention(q, k, v, causal={{causal}}):",
+      "    s = q @ k.T / sqrt(d)                 # 全単語 × 全単語 のスコア",
+      "    if causal: s = mask_future(s)         # 未来の単語は見ない（GPT 型）",
+      "    w = softmax(s)                        # 各行の合計 1",
+      "    return w @ v, w",
+      "for head in range({{heads}}):             # ヘッドごとに別の Wq, Wk, Wv",
+      "    out, w = attention(X @ Wq[head], X @ Wk[head], X @ Wv[head])",
+      "    print(f\"head {head}: '{{focus}}' looks most at\", words[w[i].argmax()])"
+    ],
+    params: { sent: { type: "text", value: "猫 が 魚 を 食べた" }, causal: { type: "select", options: ["False", "True"], value: "False" }, heads: { type: "select", options: ["1", "2", "4"], value: "2" }, focus: { type: "text", value: "食べた" } },
+    run: function (p, out) {
+      $("sent").value = p.sent; $("heads").value = p.heads; $("causal").checked = p.causal === "True"; compute();
+      var words = p.sent.trim().split(/\s+/), fi = words.indexOf(p.focus);
+      if (fi < 0) { out.print("「" + p.focus + "」は文にありません"); return; }
+      var H = +p.heads, dh = D / H, rngL = new DL.RNG(seed), usePE = $("pe").checked;
+      var X = words.map(function (w, q) { var e = embed(w); if (usePE) { var pe = posEnc(q, D); e = e.map(function (x, k) { return x + pe[k]; }); } return e; });
+      for (var h = 0; h < H; h++) {
+        var Wq = mat(dh, D, rngL), Wk = mat(dh, D, rngL);
+        var qv = mv(Wq, X[fi]), sc = X.map(function (x, j) { return (p.causal === "True" && j > fi) ? -1e9 : DL.dot(qv, mv(Wk, x)) / Math.sqrt(dh); }), w = DL.softmax(sc);
+        var mx = 0; w.forEach(function (v, j) { if (v > w[mx]) mx = j; });
+        out.print("head " + h + ": '" + p.focus + "' looks most at '" + words[mx] + "' (" + w[mx].toFixed(2) + ")   row = [" + w.map(function (v) { return v.toFixed(2); }).join(" ") + "]");
+      }
+      out.print("（重みは学習していない乱数なので、意味的な正しさではなく計算の形を見るためのもの）");
+    }
+  });
   DL.quiz("quiz11", 11, [
     { q: "Transformer に位置エンコーディングが必要な理由は？", choices: ["単語数を数えるため", "Attention は語順を知らない（入れ替えても結果が並び替わるだけ）ため", "学習を速くするため", "埋め込みを小さくするため"], answer: 1 },
     { q: "マルチヘッドの利点は？", choices: ["計算が遅くなる", "ヘッドごとに異なる種類の関係（文法・意味など）を同時に見られる", "位置が不要になる", "残差接続が不要になる"], answer: 1 },

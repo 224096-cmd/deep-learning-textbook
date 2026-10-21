@@ -43,8 +43,7 @@ h_t = o * tanh(c_t)</div>
   </div>
   <canvas id="cell" width="820" height="220"></canvas>
   <p class="canvas-caption">青＝記憶セル c の値、オレンジ＝出力 h。RNN と違い、「保つ」を何回押しても c は減りません。</p>
-  <div class="table-wrap"><table class="data" id="celltbl"><tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr></table></div>
-  <div id="export7a"></div>
+  <div class="table-wrap scroll"><table class="data" id="celltbl"><tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr></table></div>
 </section>
 
 <section class="card">
@@ -80,6 +79,12 @@ h_t = o * tanh(c_t)</div>
 </section>
 
 <section class="card">
+  <h2>コードで動かす</h2>
+  <p>同じ記憶課題を LSTM で。model を RNN に戻して、同じ T で何ステップかかるか比べてください。</p>
+  <div id="code"></div>
+</section>
+
+<section class="card">
   <h2>小テスト</h2>
   <div id="quiz7"></div>
 </section>
@@ -105,7 +110,7 @@ h_t = o * tanh(c_t)</div>
   function drawCell() {
     DL.lineChart($("cell"), [{ name: "記憶セル c", values: hist.map(function (r) { return r.c; }), color: "#2563eb" }, { name: "出力 h", values: hist.map(function (r) { return r.h; }), color: "#d97706" }], { xLabel: "ステップ", yLabel: "値", yMin: -2, yMax: 2 });
     var tb = $("celltbl"); tb.innerHTML = "<tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr>";
-    hist.slice(-8).forEach(function (r) { var tr = document.createElement("tr"); tr.innerHTML = ["t", "f", "i", "g", "o", "c", "h"].map(function (k) { return "<td>" + r[k] + "</td>"; }).join(""); tb.appendChild(tr); });
+    hist.slice().reverse().forEach(function (r) { var tr = document.createElement("tr"); tr.innerHTML = ["t", "f", "i", "g", "o", "c", "h"].map(function (k) { return "<td>" + r[k] + "</td>"; }).join(""); tb.appendChild(tr); });
   }
   ["gf", "gi", "go", "gg"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); }); });
   $("btn-step").addEventListener("click", function () { stepCell(readG()); });
@@ -113,7 +118,6 @@ h_t = o * tanh(c_t)</div>
   $("btn-keep").addEventListener("click", function () { var G = readG(); G.f = 1; G.i = 0; stepCell(G); });
   $("btn-forget").addEventListener("click", function () { var G = readG(); G.f = 0; stepCell(G); });
   $("btn-clear").addEventListener("click", function () { hist = []; c = 0; drawCell(); });
-  DL.exportButtons("export7a", function () { return hist; }, ["t", "f", "i", "g", "o", "c", "h"], "ch07_lstm_cell", 7);
   drawCell();
 
   // --- 体験② ---
@@ -151,6 +155,39 @@ h_t = o * tanh(c_t)</div>
   });
   renderBits(); show();
 
+  DL.codePanel("code", { chapter: 7, title: "LSTM · the same task, gates added",
+    code: [
+      "T = {{T}}                                  # 雑音ビットの数（覚えておく長さ）",
+      "model = {{model}}(input=2, hidden={{hidden}})",
+      "opt = Adam(model.parameters(), lr={{lr}})",
+      "for step in range({{steps}}):",
+      "    xs, target = make_batch(T, batch=8)   # 先頭ビットを最後に答える課題",
+      "    out = model(xs)                        # 時刻 0 → T まで順に読む",
+      "    loss = binary_cross_entropy(out, target)",
+      "    loss.backward()                        # BPTT（時間をさかのぼる逆伝播）",
+      "    opt.step()",
+      "    if accuracy(model) >= 0.98: break",
+      "print(\"solved at step\", step, \"accuracy\", accuracy(model))"
+    ],
+    params: { T: { value: 20, min: 5, max: 60, step: 5 }, model: { type: "select", options: ["RNN", "LSTM", "GRU"], value: "LSTM" }, hidden: { value: 8, min: 2, max: 16, step: 1 }, lr: { value: 0.01, min: 0.001, max: 0.1, step: 0.001 }, steps: { value: 1000, min: 50, max: 3000, step: 50 } },
+    run: function (p, out) {
+      var rng2 = new DL.RNG(4242), m = new SEQ.Model(p.model.toLowerCase(), p.hidden, new DL.RNG(777)), evalSet = SEQ.makeBatch(p.T, 60, rng2);
+      out.print(p.model + "  parameters = " + m.P.count());
+      return new Promise(function (resolve) {
+        var step = 0, solved = -1;
+        var t = setInterval(function () {
+          for (var i = 0; i < 10 && step < p.steps && solved < 0; i++) { var r = m.trainStep(SEQ.makeBatch(p.T, 8, rng2), p.lr); step++; if (step % 25 === 0 && m.evaluate(evalSet) >= 0.98) solved = step; }
+          var acc = m.evaluate(evalSet);
+          out.clear(); out.print(p.model + "  parameters = " + m.P.count()); out.print("step " + step + "   loss " + r.loss.toFixed(3) + "   accuracy " + acc.toFixed(2));
+          if (solved >= 0 || step >= p.steps) {
+            clearInterval(t);
+            out.print(solved >= 0 ? "solved at step " + solved + "  accuracy " + acc.toFixed(2) + "  ← T=" + p.T + " を覚えられた" : "not solved in " + step + " steps  accuracy " + acc.toFixed(2) + "  ← T を短くするか、別のモデルで試そう");
+            resolve();
+          }
+        }, 10);
+      });
+    }
+  });
   DL.quiz("quiz7", 7, [
     { q: "LSTM の忘却ゲートが 1 に近いとき、記憶セル c は？", choices: ["すぐ 0 になる", "前の値がほぼそのまま保たれる", "入力で上書きされる", "出力に出ない"], answer: 1 },
     { q: "LSTM が長期の依存関係を学べる主な理由は？", choices: ["隠れ状態が大きいから", "記憶セルが掛け算と足し算だけで更新され、勾配の通り道になるから", "学習率が高いから", "tanh を使わないから"], answer: 1, explain: "c_t = f·c_{t-1} + i·g の足し算の道が、残差接続と同じ役目をします。" },

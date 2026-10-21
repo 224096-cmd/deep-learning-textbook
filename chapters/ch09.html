@@ -17,14 +17,14 @@
     弱点は、文が長くなるほど<b>1 本の固定長ベクトルに全部を詰め込みきれない</b>こと（ボトルネック）。次章の Attention がこれを解決します。
   </div>
   <p class="video-ref">動画の対応箇所：39:30〜「Seq2Seq and Attention」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">エンコーダ／デコーダ</span>：読む側の RNN／書く側の RNN。</li>
     <li><span class="term">文脈ベクトル</span>：エンコーダの最後の隠れ状態。入力文全体の要約。</li>
     <li><span class="term">自己回帰</span>：デコーダが「自分が直前に出した単語」を次の入力にして 1 語ずつ生成すること。</li>
     <li><span class="term">教師強制（teacher forcing）</span>：学習時は、直前の出力の代わりに正解の単語をデコーダに入れて学習を安定させる方法。</li>
     <li><span class="term">&lt;BOS&gt; / &lt;EOS&gt;</span>：文の始まり／終わりを表す特別な記号。デコーダは &lt;EOS&gt; を出したら生成を止める。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -56,8 +56,13 @@
   </div>
   <canvas id="bottle" width="860" height="260"></canvas>
   <p class="canvas-caption">横軸＝文の長さ N、縦軸＝正しく取り出せた単語の割合。d を大きくすると長い文まで耐えられるが、必ずどこかで崩れる。</p>
-  <div id="export9"></div>
   <div class="note"><b>試してみよう</b>：d=32 と d=256 で、正答率が 90% を切る N を比べてください。d を 8 倍にしても、覚えられる長さは 8 倍にはなりません。これが「長文で翻訳品質が落ちる」原因のモデルです。</div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>文の長さが違っても要約ベクトルの大きさが同じ、という Seq2Seq の性質をコードで確かめます。<b>ベクトルの長さ d と文の長さ</b>を変えて実行。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -151,8 +156,29 @@
       if (N > 40) { clearInterval(t); btn.disabled = false; DL.log(9, "bottleneck", { d: d, V: V, acc_at_10: accs[9], acc_at_40: accs[39] }); }
     }, 10);
   });
-  DL.exportButtons("export9", function () { return records; }, ["d", "V", "N", "accuracy"], "ch09_bottleneck", 9);
 
+  DL.codePanel("code", { chapter: 9, title: "seq2seq · one vector for any length",
+    code: [
+      "encoder = Encoder(hidden={{d}})           # 読んだ文を d 個の数にまとめる",
+      "short = random_sentence(words={{nshort}})",
+      "long  = random_sentence(words={{nlong}})",
+      "summary_short = encoder(short)",
+      "summary_long  = encoder(long)",
+      "print(summary_short.shape, summary_long.shape)   # どちらも d 個",
+      "print(\"recovered from short:\", decode_accuracy(summary_short))",
+      "print(\"recovered from long: \", decode_accuracy(summary_long))"
+    ],
+    params: { d: { value: 64, min: 8, max: 256, step: 8 }, nshort: { value: 5, min: 1, max: 40, step: 1 }, nlong: { value: 30, min: 1, max: 60, step: 1 } },
+    run: function (p, out) {
+      var V = 50;
+      function acc(N) { var correct = 0, total = 0; for (var tr = 0; tr < 20; tr++) { var seed = rng.int(1e6), words = [], ctxv = new Array(p.d).fill(0); for (var q = 0; q < N; q++) { var w = rng.int(V); words.push(w); var kv = key(q, w, p.d, seed); for (var k = 0; k < p.d; k++) ctxv[k] += kv[k]; } for (q = 0; q < N; q++) { var best = -1, bs = -Infinity; for (var cand = 0; cand < V; cand++) { var sc = DL.dot(ctxv, key(q, cand, p.d, seed)); if (sc > bs) { bs = sc; best = cand; } } if (best === words[q]) correct++; total++; } } return correct / total; }
+      out.print("(1, " + p.d + ") (1, " + p.d + ")   ← 文の長さが " + p.nshort + " でも " + p.nlong + " でも同じ " + p.d + " 個の数");
+      var a1 = acc(p.nshort), a2 = acc(p.nlong);
+      out.print("recovered from short: " + (a1 * 100).toFixed(0) + "%");
+      out.print("recovered from long:  " + (a2 * 100).toFixed(0) + "%" + (a2 < 0.9 ? "   ← 長い文は詰め込みきれず情報が失われる" : ""));
+      $("d").value = p.d; $("dv").textContent = p.d;
+    }
+  });
   DL.quiz("quiz9", 9, [
     { q: "Seq2Seq の文脈ベクトルとは？", choices: ["入力文の最初の単語", "エンコーダの最後の隠れ状態（入力文全体の要約）", "デコーダの出力", "辞書"], answer: 1 },
     { q: "Seq2Seq の弱点は？", choices: ["短い文を訳せない", "長い文の情報を固定長ベクトル 1 本に詰め込みきれない", "単語埋め込みが使えない", "学習に正解データが要らない"], answer: 1 },

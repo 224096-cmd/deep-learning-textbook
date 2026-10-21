@@ -20,12 +20,20 @@
   <div class="code">// 普通の層        h_next = f(W·h + b)
 // 残差接続つき     h_next = h + f(W·h + b)    ← 「変化分（残差）」だけ学習すればよい
 // 逆伝播では  ∂h_next/∂h = 1 + （小さい値）  となり、勾配が 1 のまま前へ素通りできる</div>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">勾配消失／勾配爆発</span>：層を通るたびに勾配が掛け算され、0 に近づく／巨大になる現象。</li>
     <li><span class="term">残差（residual）</span>：「目標の出力 − 入力」の差分。ResNet の各層はこの差分だけを学ぶ。</li>
     <li><span class="term">恒等写像</span>：入力をそのまま出力すること。残差接続があれば、層が何もしなくても恒等写像になるので、深くしても悪くはならない。</li>
-  </ul>
+  </ul></details>
+</section>
+
+<section class="card">
+  <h2>まず：残差接続とは何か（アニメーション）</h2>
+  <div class="canvas-row">
+    <div><canvas id="plainnet" width="420" height="200"></canvas><p class="canvas-caption">普通の深いネット：赤い光（勾配）は毎層の重みを通るたびに弱くなる。</p></div>
+    <div><canvas id="resnet" width="420" height="200"></canvas><p class="canvas-caption">残差接続つき：黄色の点線が「近道」。オレンジの光が層を飛び越えて、勾配をそのまま前へ運ぶ。</p></div>
+  </div>
 </section>
 
 <section class="card">
@@ -37,9 +45,8 @@
     <button class="btn btn-small" id="btn-grad">再計算（乱数を変える）</button>
   </div>
   <canvas id="gradc" width="800" height="260"></canvas>
-  <p class="canvas-caption">横軸＝層（左が入力側）、縦軸＝その層の重みに届く勾配の大きさ（対数軸）。赤＝普通の深いネット、青＝残差接続つき。</p>
+  <p class="canvas-caption">横軸＝層（左が入力側）、縦軸＝出力の誤差がその層まで戻ってきたときの勾配の大きさ（対数軸、8 個のネットの平均）。赤＝普通の深いネット、青＝残差接続つき。</p>
   <p class="status" id="gradtxt"></p>
-  <div id="export4a"></div>
 </section>
 
 <section class="card">
@@ -55,8 +62,13 @@
     <div><canvas id="fit" width="420" height="260"></canvas><p class="canvas-caption">黒点＝教師データ（sin 波）、赤＝普通のネット、青＝残差ネットの予測</p></div>
     <div><canvas id="tloss" width="420" height="260"></canvas><p class="canvas-caption">損失（平均二乗誤差）の推移</p></div>
   </div>
-  <div id="export4b"></div>
   <div class="note"><b>試してみよう</b>：層の数を 5 → 20 → 40 と増やして学習し、普通のネットの損失がどこで下がらなくなるか調べましょう。残差ネットは深くしても学習できますか？</div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>深いネットワークを作り、残差接続あり／なしで「入力側まで届く勾配」を比べるコードです。<b>層の数・幅・初期重みの大きさ</b>を変えて実行してください。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -72,6 +84,8 @@
   var $ = DL.$;
   var rng = new DL.RNG(21);
   var gradRecords = [], trainRecords = [];
+  DL.netAnim($("plainnet"), { layers: [1, 3, 3, 3, 3, 1], labels: ["入力", "", "", "", "", "出力"], speed: 1.2 }).start();
+  DL.netAnim($("resnet"), { layers: [1, 3, 3, 3, 3, 1], labels: ["入力", "", "", "", "", "出力"], skip: true, speed: 1.2 }).start();
 
   // --- 共通：幅 D の深いネット（入力 1 → D → ... → D → 出力 1） ---
   function makeNet(L, D, scale, residual, seed) {
@@ -100,7 +114,9 @@
   // 逆伝播：各層の重み勾配を返す（必要なら更新）
   function backward(net, f, dy, lr) {
     var g = net.Wout.map(function (w) { return dy * w; });  // ∂L/∂h_L
-    var gradNorms = new Array(net.L);
+    var gradNorms = new Array(net.L), hNorms = new Array(net.L + 1);
+    var vnorm = function (v) { return Math.sqrt(v.reduce(function (a, x) { return a + x * x; }, 0)); };
+    hNorms[net.L] = vnorm(g);
     if (lr) { for (var k = 0; k < net.D; k++) net.Wout[k] -= lr * dy * f.hs[net.L][k]; net.bout -= lr * dy; }
     for (var l = net.L - 1; l >= 0; l--) {
       var gz = [], norm = 0, gprev = new Array(net.D).fill(0);
@@ -113,28 +129,31 @@
       if (lr) for (i = 0; i < net.D; i++) net.bs[l][i] -= lr * gz[i];
       if (net.residual) for (j = 0; j < net.D; j++) gprev[j] += g[j];
       gradNorms[l] = Math.sqrt(norm);
-      g = gprev;
+      g = gprev; hNorms[l] = vnorm(g);
     }
-    return gradNorms;
+    return { w: gradNorms, h: hNorms };
   }
 
   // --- 体験① ---
   function gradExp() {
     var L = parseInt($("depth").value, 10), D = parseInt($("width").value, 10), sc = parseFloat($("scale").value);
-    var seed = rng.int(1e9);
-    var plain = makeNet(L, D, sc, false, seed), res = makeNet(L, D, sc, true, seed);
-    var x = 0.7, target = 0.3;
-    var fp = forward(plain, x), fr = forward(res, x);
-    var gp = backward(plain, fp, 2 * (fp.y - target)), gr = backward(res, fr, 2 * (fr.y - target));
-    DL.lineChart($("gradc"), [{ name: "普通", values: gp, color: "#dc2626" }, { name: "残差接続", values: gr, color: "#2563eb" }], { logY: true, xLabel: "層（左＝入力側）", yLabel: "勾配の大きさ" });
-    var ratioP = gp[0] / gp[L - 1], ratioR = gr[0] / gr[L - 1];
+    // 乱数の違いで結果がぶれないよう、8 個のネットの幾何平均をとる
+    var gp = new Array(L + 1).fill(0), gr = new Array(L + 1).fill(0), K = 8;
+    for (var k = 0; k < K; k++) {
+      var seed = rng.int(1e9), plain = makeNet(L, D, sc, false, seed), res = makeNet(L, D, sc, true, seed);
+      var x = 0.7, target = 0.3, fp = forward(plain, x), fr = forward(res, x);
+      var bp = backward(plain, fp, 2 * (fp.y - target)).h, br = backward(res, fr, 2 * (fr.y - target)).h;
+      for (var l = 0; l <= L; l++) { gp[l] += Math.log(bp[l] + 1e-30) / K; gr[l] += Math.log(br[l] + 1e-30) / K; }
+    }
+    gp = gp.map(Math.exp); gr = gr.map(Math.exp);
+    DL.lineChart($("gradc"), [{ name: "普通", values: gp, color: "#dc2626" }, { name: "残差接続", values: gr, color: "#2563eb" }], { logY: true, xLabel: "層（左＝入力側、右＝出力側）", yLabel: "届く勾配の大きさ" });
+    var ratioP = gp[0] / gp[L], ratioR = gr[0] / gr[L];
     $("gradtxt").textContent = "入力側の層の勾配 ÷ 出力側の層の勾配：普通 = " + ratioP.toExponential(2) + "、残差 = " + ratioR.toExponential(2) + "。普通のネットでは層を遡るほど勾配が " + (ratioP < 1 ? "消えて" : "膨らんで") + "いきます。";
-    gradRecords.push({ depth: L, width: D, init_scale: sc, plain_first: gp[0].toExponential(3), plain_last: gp[L - 1].toExponential(3), residual_first: gr[0].toExponential(3), residual_last: gr[L - 1].toExponential(3) });
+    gradRecords.push({ depth: L, width: D, init_scale: sc, plain_first: gp[0].toExponential(3), plain_last: gp[L].toExponential(3), residual_first: gr[0].toExponential(3), residual_last: gr[L].toExponential(3) });
     DL.log(4, "grad_exp", gradRecords[gradRecords.length - 1]);
   }
   ["depth", "width", "scale"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = this.value; gradExp(); }); });
   $("btn-grad").addEventListener("click", gradExp);
-  DL.exportButtons("export4a", function () { return gradRecords; }, ["depth", "width", "init_scale", "plain_first", "plain_last", "residual_first", "residual_last"], "ch04_gradient", 4);
 
   // --- 体験② ---
   var data = [], netP, netR, lossP = [], lossR = [], steps = 0;
@@ -159,16 +178,17 @@
       for (var i = 0; i <= 100; i++) { var x = -1 + 2 * i / 100, y = forward(pair[0], x).y; if (i === 0) ctx.moveTo(px(x), py(y)); else ctx.lineTo(px(x), py(y)); }
       ctx.stroke();
     });
+    DL.legend(cv, [{ color: "#111827", label: "教師データ（sin 波）" }, { color: "#dc2626", label: "普通のネットの予測" }, { color: "#2563eb", label: "残差ネットの予測" }]);
     DL.lineChart($("tloss"), [{ name: "普通", values: lossP, color: "#dc2626" }, { name: "残差接続", values: lossR, color: "#2563eb" }], { logY: true, xLabel: "ステップ（×10）", yLabel: "MSE" });
     $("ttxt").textContent = "ステップ " + steps + " ／ 損失：普通 " + (lossP.length ? lossP[lossP.length - 1].toFixed(4) : "-") + "、残差 " + (lossR.length ? lossR[lossR.length - 1].toFixed(4) : "-");
   }
   $("btn-train").addEventListener("click", function () {
-    var btn = this; btn.disabled = true; var k = 0;
+    var btn = this; btn.disabled = true; btn.classList.add("running"); var k = 0;
     var t = setInterval(function () {
       for (var i = 0; i < 10; i++) { tstep(netP); tstep(netR); steps++; }
       lossP.push(mse(netP)); lossR.push(mse(netR)); tdraw(); k += 10;
       if (k >= 300) {
-        clearInterval(t); btn.disabled = false;
+        clearInterval(t); btn.disabled = false; btn.classList.remove("running");
         var rec = { depth: netP.L, lr: parseFloat($("tlr").value), steps: steps, plain_mse: +mse(netP).toFixed(5), residual_mse: +mse(netR).toFixed(5) };
         trainRecords.push(rec); DL.log(4, "train", rec);
       }
@@ -177,10 +197,33 @@
   $("btn-treset").addEventListener("click", tinit);
   $("tdepth").addEventListener("input", function () { $("tdepthv").textContent = this.value; tinit(); });
   $("tlr").addEventListener("input", function () { $("tlrv").textContent = parseFloat(this.value).toFixed(3); });
-  DL.exportButtons("export4b", function () { return trainRecords; }, ["depth", "lr", "steps", "plain_mse", "residual_mse"], "ch04_resnet_train", 4);
 
   gradExp(); tinit();
 
+  DL.codePanel("code", { chapter: 4, title: "ResNet · gradient through many layers",
+    code: [
+      "depth, width, scale = {{depth}}, {{width}}, {{scale}}",
+      "def plain_block(h):     return tanh(W @ h + b)",
+      "def residual_block(h):  return h + tanh(W @ h + b)   # 近道を足す",
+      "for name, block in [(\"plain\", plain_block), (\"residual\", residual_block)]:",
+      "    h = x",
+      "    for layer in range(depth):",
+      "        h = block(h)                       # 順伝播",
+      "    loss = (h - target) ** 2",
+      "    grads = backward(loss)                 # 各層まで戻った勾配",
+      "    print(name, \"first/last =\", grads[0] / grads[-1])"
+    ],
+    params: { depth: { value: 30, min: 2, max: 60, step: 1 }, width: { value: 8, min: 2, max: 16, step: 1 }, scale: { value: 1.0, min: 0.3, max: 2, step: 0.1 } },
+    run: function (p, out) {
+      $("depth").value = p.depth; $("depthv").textContent = p.depth; $("width").value = p.width; $("widthv").textContent = p.width; $("scale").value = p.scale; $("scalev").textContent = p.scale;
+      gradExp();
+      var r = gradRecords[gradRecords.length - 1];
+      var rp = (+r.plain_first) / (+r.plain_last), rr = (+r.residual_first) / (+r.residual_last);
+      out.print("plain     first/last = " + rp.toExponential(2) + (rp < 1e-3 ? "  ← 入力側にはほとんど届かない（勾配消失）" : ""));
+      out.print("residual  first/last = " + rr.toExponential(2) + "  ← 近道のおかげで消えない");
+      out.print("depth=" + p.depth + ": 普通のネットは層を 1 つ遡るごとに約 ×" + Math.pow(rp, 1 / p.depth).toFixed(2));
+    }
+  });
   DL.quiz("quiz4", 4, [
     { q: "勾配消失とは？", choices: ["データが消えること", "逆伝播で層を遡るうちに勾配が 0 に近づき、前の層が学習できなくなること", "重みが全部 0 になること", "損失が負になること"], answer: 1 },
     { q: "残差接続 h + f(h) が勾配消失を和らげる理由は？", choices: ["重みを大きくするから", "∂(h + f(h))/∂h = 1 + f′ となり、勾配が 1 のまま前の層へ素通りできるから", "活性化関数を使わないから", "層の数を減らすから"], answer: 1 },

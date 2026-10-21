@@ -43,7 +43,6 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
   </div>
   <canvas id="cell" width="820" height="200"></canvas>
   <p class="canvas-caption">h_t = (1−z)·h_{t−1} + z·n。z=0 なら前の状態がそのまま残る（LSTM の f=1, i=0 と同じ働き）。</p>
-  <div id="export8a"></div>
 </section>
 
 <section class="card">
@@ -59,6 +58,12 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
   <h2>体験③：学習レース RNN vs LSTM vs GRU</h2>
   <div id="race"></div>
   <div class="note"><b>試してみよう</b>：T=30 で 3 つを比べ、「解けるまでのステップ数」と「パラメータ数」を表に記録しましょう。GRU は LSTM より少ない重みで、どの程度ついていけますか？ T=50 ではどうですか？</div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>GRU で同じ課題を。parameters（重みの数）が LSTM より少ないことも出力で確認できます。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -82,7 +87,6 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
   $("btn-write").addEventListener("click", function () { step(1, +$("gn").value); });
   $("btn-keep").addEventListener("click", function () { step(0, +$("gn").value); });
   $("btn-clear").addEventListener("click", function () { hist = []; h = 0; draw(); });
-  DL.exportButtons("export8a", function () { return hist; }, ["t", "z", "n", "h"], "ch08_gru_cell", 8);
   draw();
 
   function params() {
@@ -94,6 +98,39 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
 
   SEQ.race("race", 8, { types: ["rnn", "lstm", "gru"], T: 30, H: 8, lr: 0.01, steps: 1500 });
 
+  DL.codePanel("code", { chapter: 8, title: "GRU · fewer gates, fewer weights",
+    code: [
+      "T = {{T}}                                  # 雑音ビットの数（覚えておく長さ）",
+      "model = {{model}}(input=2, hidden={{hidden}})",
+      "opt = Adam(model.parameters(), lr={{lr}})",
+      "for step in range({{steps}}):",
+      "    xs, target = make_batch(T, batch=8)   # 先頭ビットを最後に答える課題",
+      "    out = model(xs)                        # 時刻 0 → T まで順に読む",
+      "    loss = binary_cross_entropy(out, target)",
+      "    loss.backward()                        # BPTT（時間をさかのぼる逆伝播）",
+      "    opt.step()",
+      "    if accuracy(model) >= 0.98: break",
+      "print(\"solved at step\", step, \"accuracy\", accuracy(model))"
+    ],
+    params: { T: { value: 20, min: 5, max: 60, step: 5 }, model: { type: "select", options: ["RNN", "LSTM", "GRU"], value: "GRU" }, hidden: { value: 8, min: 2, max: 16, step: 1 }, lr: { value: 0.01, min: 0.001, max: 0.1, step: 0.001 }, steps: { value: 1000, min: 50, max: 3000, step: 50 } },
+    run: function (p, out) {
+      var rng2 = new DL.RNG(4242), m = new SEQ.Model(p.model.toLowerCase(), p.hidden, new DL.RNG(777)), evalSet = SEQ.makeBatch(p.T, 60, rng2);
+      out.print(p.model + "  parameters = " + m.P.count());
+      return new Promise(function (resolve) {
+        var step = 0, solved = -1;
+        var t = setInterval(function () {
+          for (var i = 0; i < 10 && step < p.steps && solved < 0; i++) { var r = m.trainStep(SEQ.makeBatch(p.T, 8, rng2), p.lr); step++; if (step % 25 === 0 && m.evaluate(evalSet) >= 0.98) solved = step; }
+          var acc = m.evaluate(evalSet);
+          out.clear(); out.print(p.model + "  parameters = " + m.P.count()); out.print("step " + step + "   loss " + r.loss.toFixed(3) + "   accuracy " + acc.toFixed(2));
+          if (solved >= 0 || step >= p.steps) {
+            clearInterval(t);
+            out.print(solved >= 0 ? "solved at step " + solved + "  accuracy " + acc.toFixed(2) + "  ← T=" + p.T + " を覚えられた" : "not solved in " + step + " steps  accuracy " + acc.toFixed(2) + "  ← T を短くするか、別のモデルで試そう");
+            resolve();
+          }
+        }, 10);
+      });
+    }
+  });
   DL.quiz("quiz8", 8, [
     { q: "GRU のゲートの数は？", choices: ["1", "2", "3", "4"], answer: 1, explain: "更新ゲート z とリセットゲート r。" },
     { q: "GRU で更新ゲート z が 0 に近いと？", choices: ["隠れ状態が候補 n に置き換わる", "前の隠れ状態がそのまま保たれる", "隠れ状態が 0 になる", "リセットゲートが無効になる"], answer: 1 },

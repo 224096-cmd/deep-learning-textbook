@@ -17,14 +17,14 @@
     学習には<b>誤差逆伝播法（バックプロパゲーション）</b>を使います。
   </div>
   <p class="video-ref">動画の対応箇所：01:08〜「Perceptron and MLP」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">隠れ層</span>：入力と出力の間にある層。ここで特徴が作られる。</li>
     <li><span class="term">活性化関数</span>：直線を曲げる関数。tanh、ReLU、シグモイドなど。これが無いと何層重ねても直線のまま。</li>
     <li><span class="term">損失（loss）</span>：予測と正解のズレを 1 つの数にしたもの。小さいほど良い。</li>
     <li><span class="term">勾配降下法</span>：損失が減る方向に重みを少しずつ動かす方法。</li>
     <li><span class="term">誤差逆伝播法</span>：出力側の誤差を入力側へ逆向きに伝えて、各重みの「責任（勾配）」を計算する方法。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -56,6 +56,10 @@
   </div>
   <div class="canvas-row">
     <div>
+      <canvas id="net" width="420" height="200"></canvas>
+      <p class="canvas-caption">ネットワークの形。学習中は青い光（順伝播：予測を出す）と赤い光（逆伝播：誤差を各重みへ戻す）が交互に流れる。ノードの色＝いまの値。</p>
+    </div>
+    <div>
       <canvas id="plane" width="400" height="400"></canvas>
       <p class="canvas-caption">背景＝ネットワークの出力（濃い青ほど 1 に近い）。白線＝0.5 の境界。</p>
     </div>
@@ -64,7 +68,6 @@
       <p class="canvas-caption">損失（対数軸）の推移</p>
       <canvas id="hid" width="420" height="180"></canvas>
       <p class="canvas-caption">隠れ層の各ニューロンが担当する「直線」。MLP は直線を組み合わせて曲線を作っている。</p>
-      <div id="export2"></div>
     </div>
   </div>
   <div class="note">
@@ -75,7 +78,14 @@
 
 <section class="card">
   <h2>記録表</h2>
-  <div class="table-wrap"><table class="data" id="tbl"><tr><th>#</th><th>問題</th><th>隠れ数</th><th>活性化</th><th>学習率</th><th>エポック</th><th>損失</th><th>正答率</th></tr></table></div>
+  <p class="hint">新しい結果が上に追加されます。表の中はスクロールできます。</p>
+  <div class="table-wrap scroll"><table class="data" id="tbl"><tr><th>#</th><th>問題</th><th>隠れ数</th><th>活性化</th><th>学習率</th><th>エポック</th><th>損失</th><th>正答率</th></tr></table></div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>隠れ層つきのネットワークを学習するコードです。<b>隠れニューロン数・活性化関数・学習率・エポック数</b>を変えて実行すると、上の図（決定境界・損失）が更新されます。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -114,7 +124,9 @@
     net = { H: H, W1: [], b1: [], W2: [], b2: rng.gauss() * 0.1, act: $("act").value };
     for (var j = 0; j < H; j++) { net.W1.push([rng.gauss() * 0.8, rng.gauss() * 0.8]); net.b1.push(rng.gauss() * 0.1); net.W2.push(rng.gauss() * 0.8); }
     lossHist = []; epoch = 0; runNo++;
+    anim = DL.netAnim($("net"), { layers: [2, H, 1], labels: ["入力 (x, y)", "隠れ層 " + H + " 個", "出力"], speed: 1.4 });
   }
+  var anim = null;
   function forward(x, y) {
     var a = ACT[net.act], h = [], z;
     for (var j = 0; j < net.H; j++) { z = net.W1[j][0] * x + net.W1[j][1] * y + net.b1[j]; h.push(a.f(z)); }
@@ -141,6 +153,7 @@
     L = 0; pts.forEach(function (p) { var o = forward(p.x, p.y).out; L += -(p.t * Math.log(o + 1e-9) + (1 - p.t) * Math.log(1 - o + 1e-9)); });
     lossHist.push(L / pts.length);
   }
+  function showActs() { var p = pts[rng.int(pts.length)], f = forward(p.x, p.y); anim.setActs([[p.x, p.y], f.h, [f.out]]); }
   function accuracy() { var c = 0; pts.forEach(function (p) { if ((forward(p.x, p.y).out > 0.5 ? 1 : 0) === p.t) c++; }); return c / pts.length; }
 
   var cv = $("plane"), ctx = cv.getContext("2d");
@@ -162,6 +175,7 @@
       ctx.beginPath(); ctx.arc((p.x + 1) / 2 * cv.width, (1 - (p.y + 1) / 2) * cv.height, 5, 0, 2 * Math.PI);
       ctx.fillStyle = p.t ? "#1d4ed8" : "#b91c1c"; ctx.fill(); ctx.strokeStyle = "#fff"; ctx.stroke();
     });
+    DL.legend(cv, [{ color: "#1d4ed8", label: "正解 1" }, { color: "#b91c1c", label: "正解 0" }, { color: "#93c5fd", label: "出力が 1 寄りの領域" }, { color: "#fca5a5", label: "出力が 0 寄りの領域" }]);
     DL.lineChart($("loss"), [{ name: "損失", values: lossHist }], { logY: true, xLabel: "エポック", yLabel: "loss" });
     // 隠れニューロンの直線
     var hc = $("hid"), hx = hc.getContext("2d"); hx.clearRect(0, 0, hc.width, hc.height);
@@ -181,7 +195,7 @@
     records.push(r);
     var tr = document.createElement("tr");
     tr.innerHTML = "<td>" + r.run + "</td><td>" + r.dataset + "</td><td>" + r.hidden + "</td><td>" + r.activation + "</td><td>" + r.lr + "</td><td>" + r.epoch + "</td><td>" + r.loss + "</td><td>" + (r.accuracy * 100).toFixed(1) + "%</td>";
-    $("tbl").appendChild(tr);
+    var tb = $("tbl"); tb.insertBefore(tr, tb.rows[1] || null);
     DL.log(2, "train", r);
   }
 
@@ -190,15 +204,46 @@
   $("dataset").addEventListener("change", function () { makeData(this.value); initNet(); draw(); });
   $("act").addEventListener("change", function () { initNet(); draw(); });
   $("btn-reset").addEventListener("click", function () { initNet(); draw(); });
-  $("btn-train").addEventListener("click", function () { for (var i = 0; i < 100; i++) trainEpoch(); draw(); record(); });
+  $("btn-train").addEventListener("click", function () { for (var i = 0; i < 100; i++) trainEpoch(); draw(); showActs(); anim.pulse("both"); record(); });
   $("btn-run").addEventListener("click", function () {
-    if (running) { clearInterval(running); running = null; record(); return; }
-    running = setInterval(function () { for (var i = 0; i < 5; i++) trainEpoch(); draw(); if (epoch >= 3000) { clearInterval(running); running = null; record(); } }, 30);
+    var btn = this;
+    if (running) { clearInterval(running); running = null; btn.classList.remove("running"); anim.stop(); record(); return; }
+    btn.classList.add("running"); anim.start();
+    running = setInterval(function () { for (var i = 0; i < 5; i++) trainEpoch(); draw(); if (epoch % 25 === 0) showActs(); if (epoch >= 3000) { clearInterval(running); running = null; btn.classList.remove("running"); anim.stop(); record(); } }, 30);
   });
-  DL.exportButtons("export2", function () { return records; }, ["run", "dataset", "hidden", "activation", "lr", "epoch", "loss", "accuracy"], "ch02_mlp", 2);
 
   makeData("xor"); initNet(); draw();
 
+  DL.codePanel("code", { chapter: 2, title: "MLP · hidden layer + backprop",
+    code: [
+      "X, y = make_dataset(\"{{dataset}}\")        # xor / circle / spiral",
+      "hidden = {{hidden}}                       # 隠れニューロンの数",
+      "act = {{act}}                          # 活性化関数",
+      "W1 = randn(hidden, 2); b1 = zeros(hidden)",
+      "W2 = randn(hidden);    b2 = 0.0",
+      "for epoch in range({{epochs}}):",
+      "    for x, t in zip(X, y):",
+      "        h = act(W1 @ x + b1)              # 隠れ層",
+      "        out = sigmoid(W2 @ h + b2)        # 出力（0〜1）",
+      "        loss = cross_entropy(out, t)",
+      "        W1, b1, W2, b2 -= lr * grad(loss) # 誤差逆伝播で勾配を計算し更新",
+      "print(f\"loss {loss:.4f}  accuracy {acc:.1%}\")"
+    ],
+    params: { dataset: { type: "select", options: ["xor", "circle", "spiral"], value: "xor" }, hidden: { value: 4, min: 1, max: 16, step: 1 }, act: { type: "select", options: ["tanh", "relu", "sigmoid", "linear"], value: "tanh" }, epochs: { value: 300, min: 10, max: 3000, step: 10 } },
+    run: function (p, out) {
+      $("dataset").value = p.dataset; $("hidden").value = p.hidden; $("hiddenv").textContent = p.hidden; $("act").value = p.act;
+      makeData(p.dataset); initNet();
+      return new Promise(function (resolve) {
+        var done = 0, chunk = 20;
+        var t = setInterval(function () {
+          for (var i = 0; i < chunk && done < p.epochs; i++) { trainEpoch(); done++; }
+          draw(); if (done % 100 === 0) showActs();
+          out.clear(); out.print("epoch " + done + " / " + p.epochs + "   loss " + lossHist[lossHist.length - 1].toFixed(4) + "   accuracy " + (accuracy() * 100).toFixed(1) + "%");
+          if (done >= p.epochs) { clearInterval(t); record(); out.print(p.act === "linear" ? "→ 活性化が線形だと、隠れ層があっても直線 1 本と同じ（XOR は解けない）" : (accuracy() > 0.97 ? "→ 曲がった境界で分けられた！" : "→ エポック数や隠れ数を増やしてみよう")); resolve(); }
+        }, 15);
+      });
+    }
+  });
   DL.quiz("quiz2", 2, [
     { q: "活性化関数を外して（線形のまま）層を重ねると？", choices: ["より複雑な境界が引ける", "結局 1 本の直線と同じ表現力しかない", "学習が速くなる", "損失が必ず 0 になる"], answer: 1, explain: "線形変換の合成は線形変換。曲げるには非線形の活性化関数が必要です。" },
     { q: "誤差逆伝播法が計算しているものは？", choices: ["各重みを変えたら損失がどれだけ変わるか（勾配）", "入力データの平均", "正解ラベル", "ニューロンの個数"], answer: 0, explain: "出力の誤差を後ろから前へ伝えて、各重みの勾配を求めます。" },

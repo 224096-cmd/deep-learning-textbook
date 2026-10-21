@@ -17,14 +17,14 @@
     「次を当てる」という単純な課題でも、データとモデルを大きくすると文法・知識・推論らしきものまで身につく（<b>スケーリング</b>）のが驚きでした。
   </div>
   <p class="video-ref">動画の対応箇所：47:30〜「Transformer, BERT and GPT」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">自己回帰言語モデル</span>：P(次の単語 | これまでの単語) を学ぶモデル。左から右へ一方向。</li>
     <li><span class="term">因果マスク</span>：学習時に「未来の単語」を見られないように注意の表の右上を隠す（第11章の✓）。</li>
     <li><span class="term">温度（temperature）</span>：次の単語の確率分布の尖り具合。低い＝無難で繰り返しがち、高い＝多様だが支離滅裂。</li>
     <li><span class="term">貪欲法 / サンプリング / top-k</span>：常に 1 位を選ぶ／確率に従ってくじ引き／上位 k 個からくじ引き。</li>
     <li><span class="term">文字 n-gram</span>：ここで使う小さなモデル。直前 (n−1) 文字から次の 1 文字の確率を数える。GPT の「文脈 → 次」の構造を最小限で再現。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -32,7 +32,7 @@
   <p>学習用の文章（自由に書き換え・追加できます。長いほど良くなります）</p>
   <textarea id="corpus" style="min-height:140px"></textarea>
   <div class="controls">
-    <label>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2" selected>2 文字</option><option value="3">3 文字</option><option value="4">4 文字</option></select></label>
+    <label>文脈の長さ n−1 <select id="order"><option value="1">1 文字</option><option value="2">2 文字</option><option value="3" selected>3 文字</option><option value="4">4 文字</option></select></label>
     <button class="btn btn-small" id="btn-train">学習する（数える）</button>
     <span class="status" id="st"></span>
   </div>
@@ -47,8 +47,7 @@
   <div class="canvas-row">
     <div><canvas id="dist" width="420" height="230"></canvas><p class="canvas-caption">いまの文脈に対する「次の文字」の確率（上位 8）。温度を変えると形が変わる。</p></div>
     <div>
-      <div class="table-wrap"><table class="data" id="gtbl"><tr><th>#</th><th>n−1</th><th>温度</th><th>方式</th><th>生成文</th></tr></table></div>
-      <div id="export13a"></div>
+      <div class="table-wrap scroll"><table class="data" id="gtbl"><tr><th>#</th><th>n−1</th><th>温度</th><th>方式</th><th>生成文</th></tr></table></div>
     </div>
   </div>
   <div class="note"><b>試してみよう</b>：①温度 0.1 と 2.0 で生成を比べる。②貪欲法で同じ書き出しを 2 回生成すると、必ず同じ文になることを確認。③n−1 を 1 → 4 に増やすと「それらしさ」はどう変わる？（ただし学習文からの丸写しも増える＝過学習）</div>
@@ -63,7 +62,12 @@
   </div>
   <canvas id="scale" width="860" height="240"></canvas>
   <p class="canvas-caption">横軸＝学習に使ったデータの割合、縦軸＝テスト文での 1 文字あたりの損失（交差エントロピー、低いほど良い）。線は n−1 の違い。</p>
-  <div id="export13b"></div>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>次の文字を 1 つずつ予測して文章を作るコードです。<b>書き出し・温度・文字数・文脈の長さ</b>を変えて実行（先に上で「学習する」を押してください）。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -104,7 +108,7 @@
   function probs(m, context, temp) {
     var ctx = context.slice(-m.n), table = null;
     while (ctx.length > 0) { if (m.counts[ctx]) { table = m.counts[ctx]; break; } ctx = ctx.slice(1); }
-    var list = m.vocab.map(function (c) { var cnt = table ? (table[c] || 0) : 0; return { c: c, s: cnt + 0.02 }; });
+    var list = m.vocab.map(function (c) { var cnt = table ? (table[c] || 0) : 0; return { c: c, s: cnt + 0.0003 }; });
     var logits = list.map(function (o) { return Math.log(o.s); });
     var p = DL.softmax(logits, temp || 1);
     return list.map(function (o, i) { return { c: o.c, p: p[i] }; }).sort(function (a, b) { return b.p - a.p; });
@@ -137,11 +141,10 @@
       if (k >= L) {
         clearInterval(t); btn.disabled = false;
         var rec = { run: records.length + 1, order: model.n, temp: temp, mode: mode, text: text }; records.push(rec); DL.log(13, "generate", rec);
-        var tr = document.createElement("tr"); tr.innerHTML = "<td>" + rec.run + "</td><td>" + rec.order + "</td><td>" + rec.temp + "</td><td>" + rec.mode + "</td><td style='text-align:left'>" + rec.text + "</td>"; $("gtbl").appendChild(tr);
+        var tr = document.createElement("tr"); tr.innerHTML = "<td>" + rec.run + "</td><td>" + rec.order + "</td><td>" + rec.temp + "</td><td>" + rec.mode + "</td><td style='text-align:left'>" + rec.text + "</td>"; $("gtbl").insertBefore(tr, $("gtbl").rows[1] || null);
       }
     }, 60);
   });
-  DL.exportButtons("export13a", function () { return records; }, ["run", "order", "temp", "mode", "text"], "ch13_gpt_generate", 13);
 
   // --- スケーリング実験 ---
   function crossEntropy(m, test) {
@@ -169,8 +172,31 @@
     $("sst").textContent = "学習 " + trainAll.length + " 文字、テスト " + test.length + " 文字で測定。";
     DL.log(13, "scaling", { train_chars: trainAll.length, test_chars: test.length });
   });
-  DL.exportButtons("export13b", function () { return scaleRecords; }, ["order", "train_fraction", "train_chars", "test_chars", "cross_entropy"], "ch13_scaling", 13);
 
+  DL.codePanel("code", { chapter: 13, title: "GPT · generate one character at a time",
+    code: [
+      "model = train_ngram(text, context={{order}})  # 直前 n−1 文字 → 次の文字 の確率表",
+      "prompt = \"{{prompt}}\"",
+      "temperature = {{temp}}",
+      "for i in range({{len}}):",
+      "    p = model.next_probs(prompt[-{{order}}:]) / temperature",
+      "    p = softmax(p)                            # 次の 1 文字の確率",
+      "    c = sample(p) if {{mode}} else argmax(p)  # くじ引き or 1 位",
+      "    prompt += c                               # 出した文字を足して繰り返す",
+      "print(prompt)",
+      "print(\"top-3 for the next char:\", top3(p))"
+    ],
+    params: { order: { type: "select", options: ["1", "2", "3", "4"], value: "3" }, prompt: { type: "text", value: "深層学習は" }, temp: { value: 0.8, min: 0.1, max: 2, step: 0.1 }, len: { value: 40, min: 5, max: 200, step: 5 }, mode: { type: "select", options: ["sample", "greedy"], value: "sample" } },
+    run: function (p, out) {
+      var text = $("corpus").value.replace(/\s+/g, ""); model = train(text, +p.order); $("order").value = p.order;
+      var s = p.prompt, dist;
+      for (var i = 0; i < p.len; i++) { dist = probs(model, s, p.temp); s += pick(dist, p.mode); }
+      dist = probs(model, s, p.temp); drawDist(dist); $("out").textContent = s; $("prompt").value = p.prompt; $("temp").value = p.temp; $("tempv").textContent = p.temp.toFixed(1);
+      out.print(s);
+      out.print("top-3 for the next char: " + dist.slice(0, 3).map(function (o) { return "「" + o.c + "」" + (o.p * 100).toFixed(0) + "%"; }).join("  "));
+      out.print(p.mode === "greedy" ? "→ greedy は毎回同じ文になる" : (p.temp < 0.5 ? "→ 温度が低い：無難で繰り返しがち" : p.temp > 1.5 ? "→ 温度が高い：多様だが支離滅裂" : "→ もう一度実行すると違う文になる（くじ引き）"));
+    }
+  });
   DL.quiz("quiz13", 13, [
     { q: "GPT の学習課題は？", choices: ["隠した単語を両側から当てる", "これまでの単語から次の単語を当てる", "画像にラベルを付ける", "文を翻訳する"], answer: 1 },
     { q: "温度を低くすると生成文はどうなる？", choices: ["多様で予測不能になる", "無難で確率の高い語ばかり選び、繰り返しも増える", "文字数が増える", "学習データが増える"], answer: 1 },

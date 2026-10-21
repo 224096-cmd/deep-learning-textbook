@@ -17,14 +17,14 @@
     同じフィルタを全部の場所で使い回すので、重みの数が少なく、位置がずれても同じ特徴を見つけられます。
   </div>
   <p class="video-ref">動画の対応箇所：13:18〜「CNN and ResNet」</p>
-  <h3>用語</h3>
+  <details class="terms" open><summary>ことばの意味（タップで開閉）</summary>
   <ul>
     <li><span class="term">畳み込み（convolution）</span>：フィルタと画像の重なった部分を掛けて足す計算を、位置をずらしながら繰り返すこと。</li>
     <li><span class="term">カーネル／フィルタ</span>：3×3 などの小さな重みの表。学習で「縦線検出器」「斜め線検出器」などに育つ。</li>
     <li><span class="term">特徴マップ</span>：畳み込みの出力画像。フィルタに反応した場所が明るくなる。</li>
     <li><span class="term">プーリング</span>：近くの数ピクセルをまとめて 1 つにする（最大値を取る＝MaxPool）。多少のズレを吸収し、計算量を減らす。</li>
     <li><span class="term">ストライド／パディング</span>：フィルタを何ピクセルずつ動かすか／端をゼロで埋めるかどうか。</li>
-  </ul>
+  </ul></details>
 </section>
 
 <section class="card">
@@ -51,7 +51,8 @@
     </label>
     <label><input type="checkbox" id="relu" checked> ReLU（負を 0 に）</label>
     <label>ストライド <select id="stride"><option value="1">1</option><option value="2">2</option></select></label>
-    <button class="btn btn-small" id="btn-anim">スライドをアニメ表示</button>
+    <button class="btn btn-small" id="btn-anim">フィルタが滑る様子を再生</button>
+    <label><input type="checkbox" id="loop" checked> 繰り返し再生</label>
   </div>
   <div class="canvas-row">
     <div>
@@ -74,7 +75,6 @@
       <p class="canvas-caption">4 マスの最大値を 1 マスに。細かい位置の違いが消え、サイズが半分に。</p>
     </div>
   </div>
-  <div id="export3"></div>
   <div class="note">
     <b>試してみよう</b>：「T の字」に縦エッジ・横エッジのフィルタをかけ、どこが光るか見ましょう。
     次に画像を 1 マス右にずらして描き直しても、特徴マップのパターンは同じ形のまま<b>一緒にずれる</b>ことを確認してください（これが「位置に強い」という意味）。
@@ -90,6 +90,12 @@
   </div>
   <canvas id="params" width="520" height="100"></canvas>
   <p class="muted" id="paramtxt"></p>
+</section>
+
+<section class="card">
+  <h2>コードで動かす</h2>
+  <p>畳み込みの計算をコードで書くとこうなります。<b>フィルタの 9 つの数値やストライド</b>を変えて実行すると、特徴マップが更新されます。</p>
+  <div id="code"></div>
 </section>
 
 <section class="card">
@@ -190,18 +196,22 @@
     }
   }
   $("btn-anim").addEventListener("click", function () {
-    var btn = this; btn.disabled = true;
+    var btn = this;
+    if (btn.classList.contains("running")) { btn.classList.remove("running"); return; }
+    btn.classList.add("running"); btn.textContent = "停止";
     var s = parseInt($("stride").value, 10), i = 0, j = 0, rows = FM.length, cols = FM[0].length;
     var t = setInterval(function () {
       animPos = [i, j]; highlightInput(animPos, s); drawMat($("fm"), FM, animPos);
       j++; if (j >= cols) { j = 0; i++; }
-      if (i >= rows) { clearInterval(t); animPos = null; highlightInput(null); drawMat($("fm"), FM); btn.disabled = false; DL.log(3, "animate", { stride: s }); }
+      if (i >= rows) {
+        if ($("loop").checked && btn.classList.contains("running")) { i = 0; j = 0; return; }
+        clearInterval(t); animPos = null; highlightInput(null); drawMat($("fm"), FM); btn.disabled = false; btn.classList.remove("running"); btn.textContent = "フィルタが滑る様子を再生"; DL.log(3, "animate", { stride: s });
+      }
     }, 180);
   });
   $("preset").addEventListener("change", function () { setPreset(this.value); compute(); });
   $("kernel").addEventListener("change", function () { K = KERNELS[this.value].k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS[this.value].d; renderKer(); compute(); DL.log(3, "kernel", { kernel: this.value }); });
   $("relu").addEventListener("change", compute); $("stride").addEventListener("change", compute);
-  DL.exportButtons("export3", function () { return records; }, ["preset", "kernel", "stride", "relu", "fm_size", "max_response", "max_row", "max_col"], "ch03_cnn", 3);
 
   // 体験②：パラメータ数比較
   function params() {
@@ -217,6 +227,35 @@
   K = KERNELS.vert.k.map(function (r) { return r.slice(); }); $("kdesc").textContent = KERNELS.vert.d;
   setPreset("T"); renderKer(); compute(); params();
 
+  DL.codePanel("code", { chapter: 3, title: "conv2d · slide a 3×3 filter",
+    code: [
+      "image = draw_image(\"{{preset}}\")          # 10×10 の白黒画像（上で描いたもの）",
+      "kernel = [[{{k00}}, {{k01}}, {{k02}}],",
+      "          [{{k10}}, {{k11}}, {{k12}}],",
+      "          [{{k20}}, {{k21}}, {{k22}}]]",
+      "stride = {{stride}}",
+      "fmap = []",
+      "for i in range(0, 10 - 3 + 1, stride):",
+      "    for j in range(0, 10 - 3 + 1, stride):",
+      "        patch = image[i:i+3, j:j+3]        # 重なった 3×3 を取り出す",
+      "        fmap[i][j] = relu(sum(patch * kernel))  # 掛けて足して ReLU",
+      "pooled = max_pool(fmap, 2)",
+      "print(\"feature map:\", fmap.shape, \"pooled:\", pooled.shape)",
+      "print(\"strongest response at\", argmax(fmap))"
+    ],
+    params: { preset: { type: "select", options: ["T", "box", "diag", "x", "blank"], value: "T" }, stride: { type: "select", options: ["1", "2"], value: "1" },
+      k00: { value: -1, step: 0.5 }, k01: { value: 0, step: 0.5 }, k02: { value: 1, step: 0.5 }, k10: { value: -1, step: 0.5 }, k11: { value: 0, step: 0.5 }, k12: { value: 1, step: 0.5 }, k20: { value: -1, step: 0.5 }, k21: { value: 0, step: 0.5 }, k22: { value: 1, step: 0.5 } },
+    run: function (p, out) {
+      $("preset").value = p.preset; setPreset(p.preset);
+      K = [[p.k00, p.k01, p.k02], [p.k10, p.k11, p.k12], [p.k20, p.k21, p.k22]]; $("kernel").value = "custom"; $("kdesc").textContent = "コードで指定したフィルタ"; renderKer();
+      $("stride").value = p.stride; $("relu").checked = true; compute();
+      var r = records[records.length - 1];
+      out.print("feature map: (" + FM.length + ", " + FM[0].length + ")  pooled: (" + PM.length + ", " + PM[0].length + ")");
+      out.print("strongest response at row " + r.max_row + ", col " + r.max_col + "  value " + r.max_response);
+      var sum = K.flat().reduce(function (a, b) { return a + b; }, 0);
+      out.print("filter sum = " + sum.toFixed(2) + (Math.abs(sum) < 1e-9 ? "  ← 合計 0 のフィルタは「変化（エッジ）」だけに反応" : "  ← 合計が 0 でないと明るさ自体にも反応"));
+    }
+  });
   DL.quiz("quiz3", 3, [
     { q: "畳み込み層で「同じフィルタを全部の場所で使い回す」利点は？", choices: ["重みの数が減り、位置がずれても同じ特徴を検出できる", "画像が大きくなる", "活性化関数が不要になる", "正解ラベルが不要になる"], answer: 0, explain: "パラメータ共有により、少ない重みで位置に強い特徴抽出ができます。" },
     { q: "MaxPool 2×2 の働きは？", choices: ["画像を 2 倍に拡大する", "4 マスの最大値を 1 マスにまとめ、小さなズレを吸収する", "色を反転する", "フィルタの値を学習する"], answer: 1, explain: "ダウンサンプリングにより計算量が減り、わずかな位置ずれに鈍感になります。" },
