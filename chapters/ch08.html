@@ -72,6 +72,7 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
 
 </main>
 <script src="../assets/js/content.js"></script>
+<script src="../assets/js/diagrams.js"></script>
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/seq.js"></script>
 <script src="../assets/js/seqwidget.js"></script>
@@ -82,12 +83,13 @@ h_t = (1 − z) * h_{t-1} + z * n            ← 「保つ量」と「書く量�
   var hist = [], h = 0;
   function step(z, n) { h = (1 - z) * h + z * n; hist.push({ t: hist.length + 1, z: z, n: n, h: +h.toFixed(3) }); draw(); }
   function draw() { DL.lineChart($("cell"), [{ name: "隠れ状態 h", values: hist.map(function (r) { return r.h; }), color: "#16a34a" }], { xLabel: "ステップ", yLabel: "値", yMin: -1.2, yMax: 1.2 }); }
-  ["gz", "gn"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); }); });
+  function syncDiagram() { if (!DL.archApi) return; var z = +$("gz").value, n = +$("gn").value; DL.archApi.set("z", { fill: z, sub: "z = " + z.toFixed(2) }); DL.archApi.set("n", { fill: Math.abs(n), sub: "n = " + n.toFixed(1) }); DL.archApi.set("mix", { fill: 0.5, sub: "(1−" + z.toFixed(2) + ")·h + " + z.toFixed(2) + "·n" }); }
+  ["gz", "gn"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); syncDiagram(); }); });
   $("btn-step").addEventListener("click", function () { step(+$("gz").value, +$("gn").value); });
   $("btn-write").addEventListener("click", function () { step(1, +$("gn").value); });
   $("btn-keep").addEventListener("click", function () { step(0, +$("gn").value); });
   $("btn-clear").addEventListener("click", function () { hist = []; h = 0; draw(); });
-  draw();
+  draw(); syncDiagram();
 
   function params() {
     var H = +$("pH").value, X = +$("pX").value; $("pHv").textContent = H; $("pXv").textContent = X;

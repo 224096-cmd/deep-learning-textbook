@@ -90,6 +90,7 @@ h_t = o * tanh(c_t)</div>
 
 </main>
 <script src="../assets/js/content.js"></script>
+<script src="../assets/js/diagrams.js"></script>
 <script src="../assets/js/common.js"></script>
 <script src="../assets/js/seq.js"></script>
 <script src="../assets/js/seqwidget.js"></script>
@@ -105,20 +106,21 @@ h_t = o * tanh(c_t)</div>
   function stepCell(G) {
     c = G.f * c + G.i * G.g; var h = G.o * Math.tanh(c);
     hist.push({ t: hist.length + 1, f: G.f, i: G.i, g: G.g, o: G.o, c: +c.toFixed(3), h: +h.toFixed(3) });
-    drawCell();
+    drawCell(); syncDiagram();
   }
   function drawCell() {
     DL.lineChart($("cell"), [{ name: "記憶セル c", values: hist.map(function (r) { return r.c; }), color: "#2563eb" }, { name: "出力 h", values: hist.map(function (r) { return r.h; }), color: "#d97706" }], { xLabel: "ステップ", yLabel: "値", yMin: -2, yMax: 2 });
     var tb = $("celltbl"); tb.innerHTML = "<tr><th>t</th><th>f</th><th>i</th><th>g</th><th>o</th><th>c</th><th>h</th></tr>";
     hist.slice().reverse().forEach(function (r) { var tr = document.createElement("tr"); tr.innerHTML = ["t", "f", "i", "g", "o", "c", "h"].map(function (k) { return "<td>" + r[k] + "</td>"; }).join(""); tb.appendChild(tr); });
   }
-  ["gf", "gi", "go", "gg"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); }); });
+  function syncDiagram() { if (!DL.archApi) return; var G = readG(); DL.archApi.set("f", { fill: G.f, sub: "f = " + G.f.toFixed(2) }); DL.archApi.set("i", { fill: G.i, sub: "i = " + G.i.toFixed(2) }); DL.archApi.set("o", { fill: G.o, sub: "o = " + G.o.toFixed(2) }); DL.archApi.set("g", { fill: Math.abs(G.g), sub: "g = " + G.g.toFixed(1) }); DL.archApi.set("cnext", { fill: Math.min(1, Math.abs(c) / 2), sub: "" }); }
+  ["gf", "gi", "go", "gg"].forEach(function (id) { $(id).addEventListener("input", function () { $(id + "v").textContent = (+this.value).toFixed(2); syncDiagram(); }); });
   $("btn-step").addEventListener("click", function () { stepCell(readG()); });
   $("btn-write").addEventListener("click", function () { var G = readG(); G.f = 1; G.i = 1; stepCell(G); });
   $("btn-keep").addEventListener("click", function () { var G = readG(); G.f = 1; G.i = 0; stepCell(G); });
   $("btn-forget").addEventListener("click", function () { var G = readG(); G.f = 0; stepCell(G); });
   $("btn-clear").addEventListener("click", function () { hist = []; c = 0; drawCell(); });
-  drawCell();
+  drawCell(); syncDiagram();
 
   // --- 体験② ---
   function gflow() { SEQ.gradFlowChart($("gflow"), ["rnn", "lstm"], parseInt($("gT").value, 10), 8, rng.int(1e9)); }

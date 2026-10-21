@@ -8,6 +8,7 @@ var DL_CONTENT = {
     uses: ["スパムメールの判定（単語ごとの重みを足して、しきい値を超えたら迷惑メール）", "1958 年にローゼンブラットが作った最初の学習機械。今の AI のご先祖", "ニューラルネットワークのすべての層は、この部品の集まり"],
     takeaways: ["ニューロンは「入力 × 重み を足し、しきい値と比べる」だけ", "学習＝間違えたときに重みを少し直す、を繰り返すこと", "直線 1 本で分けられない問題（XOR）はパーセプトロンには解けない → 第2章へ"],
     deeper: ["パーセプトロンの学習則は「線形分離可能なら必ず有限回で収束する」ことが証明されている（パーセプトロン収束定理）", "入力に x1·x2 のような「掛け合わせた特徴」を足すと、XOR も直線で分けられる。これが「特徴を作る」発想で、深層学習はその特徴作りを自動化したもの", "ロジスティック回帰はパーセプトロンの出力を 0/1 ではなく確率（シグモイド）にしたもの。第2章の出力層がまさにこれ"],
+    refs: [{"t": "Rosenblatt (1958) The Perceptron: A Probabilistic Model…", "u": "https://doi.org/10.1037/h0042519", "n": "パーセプトロンの原論文"}, {"t": "TensorFlow Playground", "u": "https://playground.tensorflow.org/", "n": "ブラウザで動く定番の可視化（英語）"}],
     quiz: [
       { q: "学習率を大きくしすぎるとどうなる？", choices: ["必ず速く正解する", "重みの変化が大きすぎて境界が行ったり来たりし、落ち着かないことがある", "重みが変化しなくなる", "データが増える"], answer: 1, explain: "体験①で学習率を 1.0 にして観察してみましょう。" },
       { q: "バイアス b の役割は？", choices: ["入力の個数を数える", "しきい値を動かし、境界線を原点から離れた位置にも置けるようにする", "学習率を決める", "正解ラベルを保存する"], answer: 1 }
@@ -20,6 +21,7 @@ var DL_CONTENT = {
     uses: ["手書き数字の認識（昔の郵便番号読み取り）", "住宅価格の予測、商品のおすすめ度など「表のデータ」の予測", "Transformer の中にも各単語ごとの小さな MLP が入っている（第11章）"],
     takeaways: ["隠れ層＋活性化関数で、直線を組み合わせた曲線が作れる", "損失（ズレ）を小さくする方向に重みを動かす＝勾配降下法", "誤差逆伝播法は「出力の誤差を後ろから前へ配って、各重みの責任を求める」方法"],
     deeper: ["隠れ層が 1 つあれば（ニューロンが十分多ければ）どんな連続関数も近似できる＝万能近似定理。ただし「学習できるか」は別問題", "ReLU が主流になったのは、勾配が消えにくく計算も速いから。tanh やシグモイドは入力が大きいと勾配がほぼ 0 になる", "学習率は大きすぎると発散、小さすぎると遅い。実務では途中で小さくしていく（学習率スケジュール）や Adam などの自動調整を使う"],
+    refs: [{"t": "Rumelhart, Hinton & Williams (1986) Learning representations by back-propagating errors", "u": "https://doi.org/10.1038/323533a0", "n": "誤差逆伝播法を広めた論文"}, {"t": "TensorFlow Playground", "u": "https://playground.tensorflow.org/", "n": "隠れ層・活性化を変えて試せる"}, {"t": "3Blue1Brown「ニューラルネットワーク」シリーズ", "u": "https://www.3blue1brown.com/topics/neural-networks", "n": "動画による直観的な解説（英語）"}],
     quiz: [
       { q: "「損失」とは何？", choices: ["データの個数", "予測と正解のズレを 1 つの数にしたもの。小さいほど良い", "重みの合計", "学習にかかった時間"], answer: 1 },
       { q: "らせんのような複雑なデータを学習するには、一般にどうする？", choices: ["隠れニューロンを減らす", "活性化関数を外す", "隠れニューロンや層を増やして表現力を上げる", "学習率を 0 にする"], answer: 2 }
@@ -32,6 +34,7 @@ var DL_CONTENT = {
     uses: ["スマホの顔認証、写真アプリの「人物」「犬」の自動分類", "自動運転の歩行者・標識の検出、医療画像からの病気の発見", "2012 年の画像認識コンテストで CNN が圧勝し、深層学習ブームの火付け役に"],
     takeaways: ["畳み込み＝小さなフィルタを滑らせて「掛けて足す」", "同じフィルタを全部の場所で使い回す → 重みが少なく、位置ずれに強い", "プーリングで細かい位置の違いを吸収し、だんだん大きな模様を見ていく"],
     deeper: ["パディング（周りをゼロで囲む）を使うと、特徴マップのサイズを入力と同じに保てる", "1 層目は線や点、2 層目は角や模様、3 層目以降は目・車輪など、層が深くなるほど大きな部品を見る（可視化研究で確認されている）", "最近の画像モデルは Transformer を画像に使う ViT も多いが、小さなデータや軽い機器では CNN が今も強い"],
+    refs: [{"t": "LeCun et al. (1998) Gradient-Based Learning Applied to Document Recognition", "u": "https://doi.org/10.1109/5.726791", "n": "LeNet（CNN の原型）"}, {"t": "CNN Explainer（Georgia Tech）", "u": "https://poloclub.github.io/cnn-explainer/", "n": "CNN の各層をブラウザで見られる（英語）"}],
     quiz: [
       { q: "1 つの画像に複数のフィルタ（例：16 枚）を使う理由は？", choices: ["画像を 16 倍に拡大するため", "縦線・横線・斜め線など、違う種類の模様をそれぞれ見つけるため", "計算を遅くするため", "色を増やすため"], answer: 1 },
       { q: "CNN の層を重ねていくと、後ろの層ほど何を見るようになる？", choices: ["より小さな点", "より大きく複雑な部品（目・耳・顔など）", "同じ線だけ", "何も見なくなる"], answer: 1, explain: "前の層の「線」を組み合わせて、後ろの層は「形」を見ます。" }
@@ -44,6 +47,7 @@ var DL_CONTENT = {
     uses: ["ResNet（2015）は 152 層で画像認識コンテストに優勝", "Transformer、GPT、画像生成 AI など、今の深層学習モデルほぼすべてに残差接続が入っている", "LSTM の記憶セルも同じ「足し算の道」のアイデア（第7章）"],
     takeaways: ["層を深くすると、勾配が層を通るたびに掛け算され、消えたり爆発したりする", "残差接続 h + f(h) は勾配を「1 のまま」前へ通す近道", "層が何もしなければ恒等写像になるので、深くしても悪くはならない"],
     deeper: ["残差接続と並んで、各層の出力の平均・分散を整える「正規化（BatchNorm / LayerNorm）」も深いネットの学習を助ける", "1000 層を超えるネットも残差接続があれば学習できることが示された", "Transformer の「x = x + attention(x)」「x = x + MLP(x)」はまさに残差接続。ChatGPT の中にも無数に入っている"],
+    refs: [{"t": "He et al. (2015) Deep Residual Learning for Image Recognition", "u": "https://arxiv.org/abs/1512.03385", "n": "ResNet の原論文（残差ブロックの図はこの論文の Figure 2 が元）"}],
     quiz: [
       { q: "体験①で層を 60 にしたとき、普通のネットの入力側の勾配は？", choices: ["出力側と同じ", "出力側の何桁も小さい値になる", "必ず 1 になる", "負の数になる"], answer: 1 },
       { q: "残差接続が「深くしても悪くならない」と言えるのはなぜ？", choices: ["重みが大きくなるから", "各層が f(h)=0 を学べば入力をそのまま通せるため、浅いネットと同じ性能は最低限保てるから", "学習率が上がるから", "層の数を自動で減らすから"], answer: 1 }
@@ -56,6 +60,7 @@ var DL_CONTENT = {
     uses: ["検索エンジンで「似た意味の言葉」でもヒットさせる", "翻訳・チャット AI の入口：すべての単語はまず埋め込みに変換される（GPT-2 では 1 単語＝768 個の数）", "商品や曲のおすすめ（よく一緒に買われるものを近くに置く）"],
     takeaways: ["one-hot（番号）では意味の近さを表せない", "埋め込み＝単語ごとの数の列。似た文脈で使われる単語が近くなるように学習", "ベクトルなので、コサイン類似度や足し算・引き算ができる"],
     deeper: ["word2vec には skip-gram（中心→周り）と CBOW（周り→中心）の 2 方式がある。この教材は skip-gram", "「銀行（金融）」と「土手（川の bank）」のように 1 単語 1 ベクトルでは多義語を表せない。文脈ごとにベクトルを変えるのが BERT や GPT の「文脈付き埋め込み」", "学習した埋め込みには、学習データの偏り（性別と職業の結びつきなど）がそのまま入ってしまう問題があり、研究テーマになっている"],
+    refs: [{"t": "Mikolov et al. (2013) Efficient Estimation of Word Representations in Vector Space", "u": "https://arxiv.org/abs/1301.3781", "n": "word2vec の原論文"}, {"t": "Jay Alammar: The Illustrated Word2vec", "u": "https://jalammar.github.io/illustrated-word2vec/", "n": "図解（英語）"}],
     quiz: [
       { q: "コサイン類似度が 1 に近いとき、2 つの単語ベクトルは？", choices: ["向きがほぼ同じ（意味が近い）", "向きが正反対", "長さが同じ", "どちらも 0"], answer: 0 },
       { q: "体験で文章集を自分の文に書き換えると、埋め込みはどうなる？", choices: ["変わらない", "新しい文章での「一緒に使われ方」に合わせて配置が変わる", "すべて 0 になる", "次元が増える"], answer: 1 }
@@ -68,6 +73,7 @@ var DL_CONTENT = {
     uses: ["2010 年代前半の音声認識、文字入力の予測変換", "株価や気温などの時系列予測", "現在は Transformer に主役を譲ったが、「状態を 1 つ持って順に処理する」考え方は Mamba など最新モデルにも生きている"],
     takeaways: ["RNN は同じ重みを時刻ごとに使い回し、隠れ状態で情報を引き継ぐ", "展開すると「系列の長さぶん深い」ネットになる → 勾配消失が起きる", "遠い過去を覚えるのが苦手 → ゲートで記憶を守る LSTM へ"],
     deeper: ["勾配爆発（大きくなりすぎる方）は「勾配クリッピング」（大きさに上限を付ける）で抑えられる。消失の方はこの手では直らない", "双方向 RNN は前から後ろ・後ろから前の 2 本の RNN を使い、文全体を見て判断する", "RNN の「1 つの状態を順に更新する」形は、Mamba などの最新の状態空間モデルで並列計算できる形に発展している"],
+    refs: [{"t": "Christopher Olah: Understanding LSTM Networks", "u": "https://colah.github.io/posts/2015-08-Understanding-LSTMs/", "n": "RNN の展開図・LSTM の定番解説（英語）"}, {"t": "Karpathy: The Unreasonable Effectiveness of Recurrent Neural Networks", "u": "https://karpathy.github.io/2015/05/21/rnn-effectiveness/", "n": "文字レベル RNN の実例（英語）"}],
     quiz: [
       { q: "体験③で T を長くしていくと、RNN の「解けるまでのステップ数」は？", choices: ["変わらない", "急に増え、やがて解けなくなる", "減っていく", "必ず 100 になる"], answer: 1 },
       { q: "BPTT とは？", choices: ["時間方向に展開した RNN に対して行う誤差逆伝播", "新しい活性化関数", "データを並べ替える方法", "隠れ状態を初期化する方法"], answer: 0 }
@@ -80,6 +86,7 @@ var DL_CONTENT = {
     uses: ["2015〜2018 年ごろの Google 翻訳、音声認識、スマホの音声アシスタント", "文章生成、作曲、手書き文字の生成", "今でも時系列データや小さな機器（組み込み）で現役"],
     takeaways: ["記憶セル c は「掛け算と足し算だけ」で更新され、勾配の高速道路になる", "3 つのゲート（忘却・入力・出力）が 0〜1 で情報の流れを制御する", "同じ課題で RNN より少ないステップで長い記憶を学べる"],
     deeper: ["忘却ゲートのバイアスを最初から 1（＝残す）寄りにしておくと学習が安定することが知られている。この教材もそうしている", "LSTM を何層も重ねたり、注意機構と組み合わせた Seq2Seq+Attention が 2016 年の Google 翻訳の中身", "長い系列では LSTM でも限界があり、数百〜数千語を超える依存は Transformer の方が得意"],
+    refs: [{"t": "Hochreiter & Schmidhuber (1997) Long Short-Term Memory", "u": "https://doi.org/10.1162/neco.1997.9.8.1735", "n": "LSTM の原論文"}, {"t": "Christopher Olah: Understanding LSTM Networks", "u": "https://colah.github.io/posts/2015-08-Understanding-LSTMs/", "n": "上の「しくみの図」はこの解説の図の構成を参考にした"}],
     quiz: [
       { q: "忘却ゲート f、入力ゲート i がともに 1、候補 g=0.8 のとき、c=0.5 からの次の c は？", choices: ["0.5", "0.8", "1.3", "0"], answer: 2, explain: "c = f·c + i·g = 1×0.5 + 1×0.8 = 1.3。体験①で確かめられます。" },
       { q: "LSTM のパラメータ数は、同じ隠れサイズの RNN の約何倍？", choices: ["同じ", "2 倍", "4 倍", "10 倍"], answer: 2, explain: "ゲート 3 つ＋候補 1 つ＝4 組の重み。" }
@@ -92,6 +99,7 @@ var DL_CONTENT = {
     uses: ["スマホなど計算資源の少ない機器での音声・文字処理", "Seq2Seq 翻訳のエンコーダ・デコーダ（第9章）", "「どちらが良いかは課題次第」の代表例として、研究では両方を試すことが多い"],
     takeaways: ["GRU のゲートは更新 z とリセット r の 2 つ", "h = (1−z)·h + z·n で「保つ量」と「書く量」が連動", "パラメータは LSTM の 3/4。軽くて多くの課題で同程度の性能"],
     deeper: ["GRU と LSTM のどちらが良いかは課題次第で、「決定的な差はない」という比較研究が多い", "両者とも「ゲートで情報の流れを制御する」点が本質。ゲートの数や置き方の違いは設計上の選択", "最近は「忘れる速さを入力で決める」考え方が Mamba の選択的 SSM に受け継がれている"],
+    refs: [{"t": "Cho et al. (2014) Learning Phrase Representations using RNN Encoder–Decoder", "u": "https://arxiv.org/abs/1406.1078", "n": "GRU の原論文"}, {"t": "Chung et al. (2014) Empirical Evaluation of Gated Recurrent Neural Networks", "u": "https://arxiv.org/abs/1412.3555", "n": "LSTM と GRU の比較"}],
     quiz: [
       { q: "リセットゲート r が 0 に近いとき、候補 n を作るときに？", choices: ["過去の隠れ状態をほとんど使わず、今の入力だけで作る", "入力を無視する", "隠れ状態が 2 倍になる", "学習が止まる"], answer: 0 },
       { q: "体験③の学習レースで、GRU と LSTM の違いとして最も妥当なのは？", choices: ["GRU は常に LSTM より速く解ける", "条件によって勝ち負けが入れ替わるが、GRU は少ない重みで同程度に戦える", "GRU は長い T では必ず解けない", "LSTM は重みが少ない"], answer: 1 }
@@ -104,6 +112,7 @@ var DL_CONTENT = {
     uses: ["2014〜2016 年の機械翻訳（Google 翻訳のニューラル化の最初の形）", "文章の要約、チャットボットの返答生成", "音声→文字、文字→音声などの「系列から系列」の変換全般"],
     takeaways: ["エンコーダが入力を文脈ベクトルに圧縮し、デコーダが 1 語ずつ出力する", "出した単語を次の入力にする自己回帰。学習時は正解を入れる教師強制", "固定長のベクトル 1 本には限界がある（ボトルネック）→ Attention へ"],
     deeper: ["実際の翻訳では、確率が最も高い 1 語ずつではなく、上位 k 本の候補文を並行して伸ばす「ビームサーチ」で文全体として良いものを選ぶ", "エンコーダに入力文を逆順で読ませると性能が上がる、という発見があった（最初の単語が文脈ベクトルに近くなる）", "Seq2Seq の枠組み自体は今も使われていて、Transformer のエンコーダ・デコーダ型（翻訳モデル T5 など）はその発展形"],
+    refs: [{"t": "Sutskever, Vinyals & Le (2014) Sequence to Sequence Learning with Neural Networks", "u": "https://arxiv.org/abs/1409.3215", "n": "Seq2Seq の原論文"}],
     quiz: [
       { q: "教師強制（teacher forcing）とは？", choices: ["先生が手で翻訳すること", "学習時にデコーダへ自分の出力ではなく正解の単語を入れる方法", "エンコーダを使わない方法", "文脈ベクトルを大きくする方法"], answer: 1 },
       { q: "体験②でベクトルの長さ d を 2 倍にすると、取り出せる文の長さは？", choices: ["ちょうど 2 倍になる", "少しは伸びるが 2 倍にはならず、どこかで必ず崩れる", "無限になる", "変わらない"], answer: 1 }
@@ -116,6 +125,7 @@ var DL_CONTENT = {
     uses: ["翻訳で「どの単語を訳しているか」を自動で対応づける（アライメント）", "画像の説明文生成（画像のどこを見て単語を出すか）", "Transformer・GPT・BERT・画像生成 AI のすべての土台（第11章以降）"],
     takeaways: ["Attention = 内積でスコア → softmax で合計 1 の重み → Value の重み付き和", "Query が「探しているもの」、Key が「見出し」、Value が「中身」", "Seq2Seq のボトルネックを、入力の全単語から直接取り出すことで解消"],
     deeper: ["内積以外にも、小さなニューラルネットでスコアを計算する「加法的注意」（Bahdanau 方式）がある", "注意の重みは「モデルがどこを見たか」の説明として便利だが、重みが大きい＝重要とは限らないという指摘もある", "1 つの Query が自分自身を含む全要素を見るのが自己注意。これが Transformer の基本部品"],
+    refs: [{"t": "Bahdanau, Cho & Bengio (2014) Neural Machine Translation by Jointly Learning to Align and Translate", "u": "https://arxiv.org/abs/1409.0473", "n": "Attention の原論文（アライメント図の元）"}, {"t": "Distill: Attention and Augmented Recurrent Neural Networks", "u": "https://distill.pub/2016/augmented-rnns/", "n": "動く図解（英語）"}],
     quiz: [
       { q: "温度（スケール）を小さくすると重みの分布は？", choices: ["平らになる", "1 つの Key に集中して尖る", "すべて 0 になる", "負になる"], answer: 1 },
       { q: "Attention の出力は何の重み付き和？", choices: ["Query", "Key", "Value", "スコア"], answer: 2 }
@@ -128,6 +138,7 @@ var DL_CONTENT = {
     uses: ["GPT・ChatGPT・Claude・Gemini などの大規模言語モデル", "BERT（検索エンジンの質問理解）、翻訳、要約", "画像認識（ViT）、音声認識、タンパク質構造予測（AlphaFold）にも"],
     takeaways: ["自己注意：文中の全単語同士の関係を一度に計算する", "位置エンコーディングで語順を補う（Attention 自体は語順を知らない）", "並列化できて速いが、注意の表は文の長さの 2 乗で増える"],
     deeper: ["Transformer の各層の出力を安定させる LayerNorm、学習率を最初ゆっくり上げるウォームアップなど、学習を安定させる工夫が多数ある", "文の長さ n の 2 乗で増える注意の計算を軽くする研究（Sparse / Linear Attention、FlashAttention）が盛ん", "位置の表し方も進化していて、GPT-2 は学習で決める位置埋め込み、最近のモデルは回転位置埋め込み（RoPE）が多い"],
+    refs: [{"t": "Vaswani et al. (2017) Attention Is All You Need", "u": "https://arxiv.org/abs/1706.03762", "n": "Transformer の原論文"}, {"t": "Jay Alammar: The Illustrated Transformer", "u": "https://jalammar.github.io/illustrated-transformer/", "n": "最も読まれている図解（英語）"}, {"t": "Transformer Explainer（Georgia Tech）", "u": "https://poloclub.github.io/transformer-explainer/", "n": "GPT-2 をブラウザで動かして見られる（英語）"}],
     quiz: [
       { q: "√d でスコアを割る理由は？", choices: ["結果を整数にするため", "次元が大きいと内積が大きくなりすぎ softmax が尖りすぎるのを防ぐため", "計算を遅くするため", "重みを負にするため"], answer: 1 },
       { q: "因果マスク（未来を見ない）を使うのはどんなとき？", choices: ["画像を分類するとき", "GPT のように「次の単語」を予測するとき（答えを見てはいけない）", "位置エンコーディングを計算するとき", "学習率を決めるとき"], answer: 1 }
@@ -140,6 +151,7 @@ var DL_CONTENT = {
     uses: ["Google 検索の質問理解（2019 年から導入）", "文章の感情分析、スパム判定、質問応答システム", "日本語版 BERT も多数公開され、企業の文書分類などに利用"],
     takeaways: ["BERT は Transformer のエンコーダ＋穴埋め（MLM）で事前学習", "左右両方の文脈を使う「双方向」", "事前学習 → ファインチューニングで、少ないデータでも高性能"],
     deeper: ["BERT には「2 つの文が続きかどうか」を当てる課題（NSP）もあったが、後の研究で効果は小さいと分かった", "日本語では単語の切れ目がないので、文を細かい部品（サブワード）に分けるトークナイザが重要", "BERT のように文全体の意味をベクトル化する技術は、検索や「似た文書を探す」機能（ベクトル検索）の土台"],
+    refs: [{"t": "Devlin et al. (2018) BERT: Pre-training of Deep Bidirectional Transformers", "u": "https://arxiv.org/abs/1810.04805", "n": "BERT の原論文"}, {"t": "Jay Alammar: The Illustrated BERT", "u": "https://jalammar.github.io/illustrated-bert/", "n": "図解（英語）"}],
     quiz: [
       { q: "BERT の事前学習に「正解ラベル付きデータ」が不要なのはなぜ？", choices: ["人が全部ラベルを付けたから", "隠した単語そのものが正解になるので、普通の文章だけで学習できるから", "正解を使わない学習法だから", "穴を作らないから"], answer: 1 },
       { q: "BERT が GPT のような「次の単語を 1 語ずつ出す文章生成」に向かない理由は？", choices: ["小さすぎるから", "両側を見て穴を埋める設計で、左から右へ順に生成する形になっていないから", "英語しか扱えないから", "Attention を使わないから"], answer: 1 }
@@ -152,6 +164,7 @@ var DL_CONTENT = {
     uses: ["ChatGPT をはじめとする対話 AI、文章作成・要約・翻訳", "プログラムのコード補完・生成", "画像・音声・動画の生成モデルにも同じ「次を予測する」考え方が使われている"],
     takeaways: ["GPT は Transformer のデコーダ＋「次の単語予測」で学習", "生成は自己回帰：出した単語を足して繰り返す", "温度やサンプリング方式で「無難さ」と「多様さ」のバランスを調整"],
     deeper: ["GPT-1 → GPT-2 → GPT-3 とパラメータを 1 億 → 15 億 → 1750 億と増やす中で、「例を数個見せるだけで新しい課題が解ける」能力が現れた", "学習した「次の単語予測」だけでは人の指示に従うのが苦手なので、人のフィードバックで調整する RLHF などの追加学習で ChatGPT のような対話 AI になる", "文章だけでなく画像・音声・動画でも「次を予測する」考え方が中心になっていて、1 つのモデルで複数を扱うマルチモーダル化が進んでいる"],
+    refs: [{"t": "Radford et al. (2018) Improving Language Understanding by Generative Pre-Training", "u": "https://cdn.openai.com/research-covers/language-unsupervised/language_understanding_paper.pdf", "n": "GPT-1 の論文"}, {"t": "Jay Alammar: The Illustrated GPT-2", "u": "https://jalammar.github.io/illustrated-gpt2/", "n": "図解（英語）"}, {"t": "Transformer Explainer（Georgia Tech）", "u": "https://poloclub.github.io/transformer-explainer/", "n": "次の単語の確率を見られる（英語）"}],
     quiz: [
       { q: "体験②のミニ・スケーリング実験で、学習データを増やすとテスト損失は？", choices: ["増える", "減っていく（当てやすくなる）", "変わらない", "0 になる"], answer: 1 },
       { q: "「貪欲法」で生成すると、同じ書き出しからは？", choices: ["毎回違う文", "毎回同じ文", "文が出ない", "1 文字だけ出る"], answer: 1 }

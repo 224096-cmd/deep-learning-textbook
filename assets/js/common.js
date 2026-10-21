@@ -157,11 +157,18 @@ var DL = (function () {
         ]);
         goal.parentNode.insertBefore(extra, goal.nextSibling);
       }
+      if (typeof DL_DIAGRAMS !== "undefined" && DL_DIAGRAMS[no]) {
+        var firstCard = main.querySelector("section.card");
+        var dcard = el("section", { class: "card" }, [el("h2", { text: "しくみの図（部品をクリックすると説明が出ます）" }), el("div", { id: "arch" })]);
+        if (firstCard) firstCard.parentNode.insertBefore(dcard, firstCard.nextSibling); else main.appendChild(dcard);
+        DL.archApi = arch("arch", DL_DIAGRAMS[no]);
+      }
       var quizCard = main.querySelector("[id^=quiz]"); if (quizCard) quizCard = quizCard.closest("section");
       var wrap = el("section", { class: "card card-review" }, [
         el("h2", { text: "ふりかえり：この章の 3 つのポイント" }),
         el("ol", { class: "takeaways" }, C.takeaways.map(function (t) { return el("li", { text: t }); })),
         C.deeper ? el("details", { class: "deeper" }, [el("summary", { text: "発展：もっと知りたい人へ" }), el("ul", {}, C.deeper.map(function (t) { return el("li", { text: t }); }))]) : el("span"),
+        C.refs ? el("div", { class: "refs" }, [el("div", { class: "refs-title", text: "参考文献・さらに読む" }), el("ul", {}, C.refs.map(function (r) { return el("li", {}, [el("a", { href: r.u, target: "_blank", rel: "noopener", text: r.t }), r.n ? el("span", { class: "muted", text: "　" + r.n }) : el("span")]); }))]) : el("span"),
         el("p", { class: "muted", text: "次の小テストで確かめましょう。" })
       ]);
       if (quizCard) main.insertBefore(wrap, quizCard); else main.appendChild(wrap);
@@ -616,6 +623,92 @@ var DL = (function () {
     return { run: execute, values: values, set: function (k, v) { if (inputs[k]) inputs[k].value = v; } };
   }
 
+  /* ---------- しくみの図（SVG・クリックで説明） ----------
+     DL.arch("id", { w, h, intro, nodes:[{id,x,y,w,h,label,sub,color,shape,desc}], edges:[{from,to,label,color,dashed,bend,path}] })
+     color: blue | green | amber | rose | violet | gray | dark      shape: box(既定) | circle | op（小さな丸：⊕ × σ など）
+     戻り値 api.set(id, {fill: 0〜1, sub: "..."}) でノードの色の濃さ・サブ文字を後から変えられる */
+  var ARCH_COLORS = { blue: ["#dbeafe", "#2563eb"], green: ["#d1fae5", "#059669"], amber: ["#fef3c7", "#d97706"], rose: ["#ffe4e6", "#e11d48"], violet: ["#ede9fe", "#7c3aed"], gray: ["#f1f5f9", "#64748b"], dark: ["#1e293b", "#0f172a"] };
+  function arch(containerId, spec) {
+    var c = $(containerId); if (!c) return null;
+    var NS = "http://www.w3.org/2000/svg";
+    function sv(tag, attrs, text) { var e = document.createElementNS(NS, tag); Object.keys(attrs || {}).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; return e; }
+    c.innerHTML = ""; c.classList.add("arch");
+    var svg = sv("svg", { viewBox: "0 0 " + spec.w + " " + spec.h, class: "arch-svg", role: "img" });
+    var defs = sv("defs");
+    Object.keys(ARCH_COLORS).forEach(function (k) {
+      var m = sv("marker", { id: containerId + "-arrow-" + k, viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "11", markerHeight: "11", markerUnits: "userSpaceOnUse", orient: "auto-start-reverse" });
+      m.appendChild(sv("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: ARCH_COLORS[k][1] })); defs.appendChild(m);
+    });
+    svg.appendChild(defs);
+    var byId = {}; spec.nodes.forEach(function (n) { byId[n.id] = n; n.w = n.w || (n.shape === "op" ? 28 : n.shape === "circle" ? 44 : 120); n.h = n.h || (n.shape === "op" ? 28 : n.shape === "circle" ? 44 : 50); });
+    function center(n) { return [n.x + n.w / 2, n.y + n.h / 2]; }
+    function port(n, toward) {
+      var cx = center(n), dx = toward[0] - cx[0], dy = toward[1] - cx[1];
+      if (n.shape === "circle" || n.shape === "op") { var r = n.w / 2, L = Math.hypot(dx, dy) || 1; return [cx[0] + dx / L * r, cx[1] + dy / L * r]; }
+      if (Math.abs(dx) * n.h > Math.abs(dy) * n.w) return [dx > 0 ? n.x + n.w : n.x, cx[1]];
+      return [cx[0], dy > 0 ? n.y + n.h : n.y];
+    }
+    var gE = sv("g"), gN = sv("g"); svg.appendChild(gE); svg.appendChild(gN);
+    (spec.edges || []).forEach(function (e) {
+      var col = e.color || "gray", stroke = ARCH_COLORS[col][1], d;
+      if (e.path) d = e.path;
+      else {
+        var a = byId[e.from], b = byId[e.to], ca = center(a), cb = center(b), p1 = port(a, cb), p2 = port(b, ca);
+        if (e.bend) { var mx = (p1[0] + p2[0]) / 2, my = (p1[1] + p2[1]) / 2 + e.bend; p1 = port(a, [mx, my]); p2 = port(b, [mx, my]); d = "M" + p1[0] + " " + p1[1] + " Q" + mx + " " + my + " " + p2[0] + " " + p2[1]; }
+        else d = "M" + p1[0] + " " + p1[1] + " L" + p2[0] + " " + p2[1];
+      }
+      var path = sv("path", { d: d, fill: "none", stroke: stroke, "stroke-width": e.width || 2, "marker-end": e.noArrow ? "" : "url(#" + containerId + "-arrow-" + col + ")" });
+      if (e.dashed) path.setAttribute("stroke-dasharray", "6 4");
+      gE.appendChild(path);
+      if (e.label) {
+        var lab = sv("text", { class: "arch-edge-label", fill: stroke }, e.label), lx, ly;
+        if (e.labelAt) { lx = e.labelAt[0]; ly = e.labelAt[1]; }
+        else if (e.bend) { lx = ((p1[0] + p2[0]) / 2 + mx) / 2; ly = ((p1[1] + p2[1]) / 2 + my) / 2 + (e.bend < 0 ? -6 : 14); }
+        else { var dx0 = p2[0] - p1[0], dy0 = p2[1] - p1[1], L0 = Math.hypot(dx0, dy0) || 1; lx = (p1[0] + p2[0]) / 2 - dy0 / L0 * 10; ly = (p1[1] + p2[1]) / 2 + dx0 / L0 * 10 - 2; }
+        lab.setAttribute("x", lx); lab.setAttribute("y", ly); lab.setAttribute("text-anchor", "middle"); gE.appendChild(lab);
+      }
+    });
+    var desc = el("div", { class: "arch-desc" }, [el("p", { class: "arch-desc-text", text: spec.intro || "図の部品をクリックすると説明が出ます。" })]);
+    var nodeEls = {};
+    spec.nodes.forEach(function (n) {
+      var col = ARCH_COLORS[n.color || "blue"], g = sv("g", { class: "arch-node" + (n.desc ? " clickable" : "") });
+      var shape;
+      if (n.shape === "circle" || n.shape === "op") shape = sv("circle", { cx: n.x + n.w / 2, cy: n.y + n.h / 2, r: n.w / 2, fill: col[0], stroke: col[1], "stroke-width": 2 });
+      else shape = sv("rect", { x: n.x, y: n.y, width: n.w, height: n.h, rx: 10, fill: col[0], stroke: col[1], "stroke-width": 2 });
+      g.appendChild(shape);
+      var cx = n.x + n.w / 2, cy = n.y + n.h / 2, textColor = (n.color === "dark") ? "#fff" : "#1e293b";
+      var lines = String(n.label).split("\n"), subEl = null;
+      var base = cy - (lines.length - 1) * 8 + (n.sub ? -7 : 0) + 5;
+      lines.forEach(function (ln, i) { g.appendChild(sv("text", { x: cx, y: base + i * 16, "text-anchor": "middle", class: "arch-label" + (n.shape === "op" ? " op" : ""), fill: textColor }, ln)); });
+      if (n.sub) { subEl = sv("text", { x: cx, y: base + (lines.length - 1) * 16 + 16, "text-anchor": "middle", class: "arch-sub", fill: n.color === "dark" ? "#cbd5e1" : "#475569" }, n.sub); g.appendChild(subEl); }
+      if (n.note) g.appendChild(sv("text", { x: cx, y: n.y + n.h + 16, "text-anchor": "middle", class: "arch-sub", fill: "#64748b" }, n.note));
+      if (n.desc) {
+        g.addEventListener("click", function () {
+          Array.prototype.forEach.call(gN.querySelectorAll(".arch-node"), function (x) { x.classList.remove("selected"); });
+          g.classList.add("selected");
+          desc.innerHTML = ""; desc.appendChild(el("p", { class: "arch-desc-title", text: n.label.replace(/\n/g, " ") })); desc.appendChild(el("p", { class: "arch-desc-text", text: n.desc }));
+          log(0, "arch_click", { diagram: containerId, node: n.id });
+        });
+      }
+      gN.appendChild(g); nodeEls[n.id] = { g: g, shape: shape, sub: subEl, col: col };
+    });
+    c.appendChild(svg); c.appendChild(desc);
+    return {
+      set: function (id, o) {
+        var ne = nodeEls[id]; if (!ne) return;
+        if (o.fill !== undefined) {
+          var t = Math.max(0, Math.min(1, o.fill)); ne.shape.setAttribute("fill", mixColor("#ffffff", ne.col[1], 0.12 + 0.75 * t));
+          Array.prototype.forEach.call(ne.g.querySelectorAll("text"), function (tx) { tx.setAttribute("fill", t > 0.55 ? "#fff" : (tx.classList.contains("arch-sub") ? "#475569" : "#1e293b")); });
+        }
+        if (o.sub !== undefined && ne.sub) ne.sub.textContent = o.sub;
+      }
+    };
+  }
+  function mixColor(h1, h2, t) {
+    var a = [1, 3, 5].map(function (i) { return parseInt(h1.slice(i, i + 2), 16); }), b = [1, 3, 5].map(function (i) { return parseInt(h2.slice(i, i + 2), 16); });
+    return "rgb(" + a.map(function (v, i) { return Math.round(v + (b[i] - v) * t); }).join(",") + ")";
+  }
+
   // 凡例を描く（右上）
   function legend(cv, items) {
     var ctx = cv.getContext("2d"), w = 0; ctx.font = "11px sans-serif";
@@ -626,7 +719,7 @@ var DL = (function () {
   }
 
   return {
-    netAnim: netAnim, codePanel: codePanel, legend: legend,
+    netAnim: netAnim, codePanel: codePanel, legend: legend, arch: arch,
     CHAPTERS: CHAPTERS, $: $, el: el, RNG: RNG, softmax: softmax, sigmoid: sigmoid, tanh: tanh, relu: relu, dot: dot, fmt: fmt,
     nav: nav, log: log, loadLog: loadLog, clearLog: clearLog,
     download: download, toCSV: toCSV, toMarkdownTable: toMarkdownTable, exportButtons: exportButtons, stamp: stamp,

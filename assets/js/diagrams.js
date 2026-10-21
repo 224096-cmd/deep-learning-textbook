@@ -1,0 +1,182 @@
+/* 各章の「しくみの図」の定義。common.js の nav() が自動で差し込む。
+   元論文・定番解説の図の構成を参考に、独自に描き起こしたもの。部品をクリックすると説明が出る。 */
+var DL_DIAGRAMS = {
+  1: { w: 900, h: 250, intro: "ニューロン 1 個の中身。入力 → 重み → 足し算 → しきい値判定 → 出力。部品をクリックすると説明が出ます。",
+    nodes: [
+      { id: "x1", x: 40, y: 50, shape: "circle", color: "gray", label: "x₁", desc: "1 つ目の入力。例：国語の点数、画像の 1 ピクセルの明るさ、など「数」なら何でもよい。" },
+      { id: "x2", x: 40, y: 150, shape: "circle", color: "gray", label: "x₂", desc: "2 つ目の入力。入力は何個あってもよい（画像なら数万個）。" },
+      { id: "sum", x: 330, y: 92, shape: "circle", color: "blue", label: "Σ", desc: "重み付き和：w₁x₁ + w₂x₂ + b を計算する。「どの入力をどれだけ重視するか」を足し合わせる場所。" },
+      { id: "b", x: 338, y: 195, shape: "op", color: "amber", label: "b", desc: "バイアス。入力に関係なく足される値で、しきい値の位置を動かす。学習で変わる。" },
+      { id: "step", x: 480, y: 85, w: 190, h: 58, color: "violet", label: "しきい値と比べる", sub: "z > 0 なら 1、それ以外は 0", desc: "活性化関数（ここではステップ関数）。重み付き和 z が 0 より大きいか小さいかで、出力を 0 か 1 に決める。第2章ではこの部分を「なめらかな曲線」に替える。" },
+      { id: "y", x: 790, y: 92, shape: "circle", color: "green", label: "y", desc: "出力。0 か 1（例：合格／不合格、迷惑メール／通常メール）。" }
+    ],
+    edges: [
+      { from: "x1", to: "sum", label: "× w₁", color: "blue", labelAt: [190, 62] },
+      { from: "x2", to: "sum", label: "× w₂", color: "blue", labelAt: [190, 190] },
+      { from: "b", to: "sum", color: "amber" },
+      { from: "sum", to: "step", label: "z", color: "blue" },
+      { from: "step", to: "y", color: "green" }
+    ] },
+  2: { w: 900, h: 270, intro: "MLP は「線形（掛けて足す）→ 非線形（曲げる）」の繰り返し。2 入力・隠れ 4 個・1 出力の例。",
+    nodes: [
+      { id: "in", x: 20, y: 100, w: 110, h: 60, color: "gray", label: "入力", sub: "x = (x₁, x₂)", desc: "入力ベクトル。点の座標 (x, y) など。" },
+      { id: "lin1", x: 170, y: 90, w: 150, h: 80, color: "blue", label: "線形 ①", sub: "W₁·x + b₁ （4 本の直線）", desc: "隠れニューロン 4 個それぞれが、入力に自分の重みを掛けて足す。1 個 1 個がパーセプトロンの「重み付き和」で、平面上の直線に対応する。" },
+      { id: "act", x: 360, y: 90, w: 130, h: 80, color: "amber", label: "非線形", sub: "tanh / ReLU", desc: "活性化関数で各ニューロンの出力を曲げる。これが無いと、線形①と線形②を合成しても結局 1 本の直線にしかならない。" },
+      { id: "lin2", x: 530, y: 90, w: 150, h: 80, color: "blue", label: "線形 ②", sub: "W₂·h + b₂ （意見をまとめる）", desc: "隠れ層 4 個の出力 h に重みを掛けて足し、1 つの数にする。「4 本の直線をどう組み合わせるか」を決める層。" },
+      { id: "sig", x: 720, y: 100, w: 70, h: 60, shape: "box", color: "violet", label: "σ", sub: "0〜1", desc: "シグモイド関数で 0〜1 の確率に変える。0.5 を境に青／赤を判定。" },
+      { id: "out", x: 830, y: 108, shape: "circle", color: "green", label: "y", desc: "出力（確率）。損失＝正解との差。これを小さくするよう、誤差逆伝播で W₂, b₂, W₁, b₁ の順に修正する。" },
+      { id: "loss", x: 530, y: 205, w: 260, h: 44, color: "rose", label: "損失 ← 正解と比べる", sub: "逆伝播：出力側から順に重みを直す", desc: "予測 y と正解 t のズレ（交差エントロピー）。小さくする方向（勾配）を、出力側の層から入力側の層へ逆向きに伝えて各重みを少し動かす。" }
+    ],
+    edges: [
+      { from: "in", to: "lin1", color: "blue" }, { from: "lin1", to: "act", color: "blue", label: "z₁…z₄" }, { from: "act", to: "lin2", color: "amber", label: "h₁…h₄" }, { from: "lin2", to: "sig", color: "blue" }, { from: "sig", to: "out", color: "violet" },
+      { from: "out", to: "loss", color: "rose", dashed: true, bend: 30 }, { from: "loss", to: "lin1", color: "rose", dashed: true, bend: 60, label: "勾配を後ろから前へ" }
+    ] },
+  3: { w: 900, h: 300, intro: "画像認識 CNN の典型的な流れ（LeNet 型）。左から右へ、画像は小さく・特徴は多くなる。",
+    nodes: [
+      { id: "img", x: 15, y: 90, w: 100, h: 80, color: "gray", label: "入力画像", sub: "28×28×1", desc: "白黒 28×28 ピクセルの画像（手書き数字など）。カラーなら ×3（RGB）。" },
+      { id: "c1", x: 145, y: 80, w: 120, h: 100, color: "blue", label: "畳み込み ①\n+ ReLU", sub: "3×3 × 8 枚 → 26×26×8", desc: "3×3 のフィルタ 8 種類を画像の上で滑らせ、8 枚の特徴マップを作る。1 層目は線・点など単純な模様に反応する。" },
+      { id: "p1", x: 295, y: 95, w: 100, h: 70, color: "amber", label: "MaxPool", sub: "2×2 → 13×13×8", desc: "2×2 の最大値を 1 マスに。サイズが半分になり、少しの位置ずれに強くなる。" },
+      { id: "c2", x: 425, y: 80, w: 120, h: 100, color: "blue", label: "畳み込み ②\n+ ReLU", sub: "3×3 × 16 枚 → 11×11×16", desc: "1 層目の「線」を組み合わせて、角・曲線・模様などより大きな部品に反応する 16 枚の特徴マップを作る。" },
+      { id: "p2", x: 575, y: 95, w: 100, h: 70, color: "amber", label: "MaxPool", sub: "2×2 → 5×5×16", desc: "さらに半分に。ここまでで「どこに何の部品があるか」の要約ができる。" },
+      { id: "fc", x: 705, y: 80, w: 100, h: 100, color: "violet", label: "平らに並べる\n→ 全結合", sub: "400 → 64", desc: "5×5×16 = 400 個の数を 1 列に並べ、第2章の MLP に入れる。特徴の組み合わせから答えを決める部分。" },
+      { id: "out", x: 830, y: 95, w: 60, h: 70, color: "green", label: "10\nクラス", desc: "softmax で「0〜9 のどれか」の確率を出す。" },
+      { id: "note", x: 145, y: 225, w: 630, h: 50, color: "gray", label: "重みがあるのは「畳み込み」と「全結合」だけ。畳み込みのフィルタは全位置で共有されるので、画像が大きくても重みは増えない。", desc: "28×28 を MLP に直接入れると 1 層目だけで数十万個の重みが必要だが、3×3×8 の畳み込みなら 80 個。これが CNN が画像で強い理由の 1 つ。" }
+    ],
+    edges: [ { from: "img", to: "c1", color: "blue" }, { from: "c1", to: "p1", color: "amber" }, { from: "p1", to: "c2", color: "blue" }, { from: "c2", to: "p2", color: "amber" }, { from: "p2", to: "fc", color: "violet" }, { from: "fc", to: "out", color: "green" } ] },
+  4: { w: 900, h: 260, intro: "残差ブロック（He らの図の構成）。左：普通の 2 層。右：同じ 2 層に「近道」を足したもの。",
+    nodes: [
+      { id: "x1", x: 30, y: 105, shape: "circle", color: "gray", label: "x", desc: "ブロックへの入力。" },
+      { id: "w1", x: 110, y: 95, w: 110, h: 64, color: "blue", label: "重み層", sub: "W₁·x + b₁ → ReLU", desc: "普通の層。入力を変換する。" },
+      { id: "w2", x: 250, y: 95, w: 110, h: 64, color: "blue", label: "重み層", sub: "W₂·h + b₂", desc: "2 層目。出力 H(x) をそのまま次へ渡す。層が深くなるほど、逆伝播の勾配は W₂, W₁ … と掛け算され小さくなっていく。" },
+      { id: "o1", x: 390, y: 105, shape: "circle", color: "gray", label: "H(x)", desc: "普通のブロックの出力。入力 x の情報は 2 つの重み層を通ったあとにしか残らない。" },
+      { id: "x2", x: 480, y: 105, shape: "circle", color: "gray", label: "x", desc: "残差ブロックへの入力。" },
+      { id: "r1", x: 560, y: 95, w: 100, h: 64, color: "blue", label: "重み層", sub: "→ ReLU", desc: "残差ブロックの 1 層目。「入力をどう変えるか（差分）」だけを学べばよい。" },
+      { id: "r2", x: 680, y: 95, w: 100, h: 64, color: "blue", label: "重み層", sub: "F(x)", desc: "2 層目の出力 F(x) は「変化分（残差）」。何も変えたくなければ F(x)=0 を学べばよく、それは簡単。" },
+      { id: "add", x: 810, y: 113, shape: "op", color: "amber", label: "⊕", desc: "足し算：出力 = F(x) + x。逆伝播ではこの足し算を通って勾配がそのまま x へ戻る（∂/∂x = 1 + ∂F/∂x）。これが「勾配の高速道路」。" },
+      { id: "o2", x: 855, y: 180, shape: "circle", color: "green", label: "F(x)+x", desc: "残差ブロックの出力。深く積んでも、少なくとも入力がそのまま通る道があるので悪くはならない。" },
+      { id: "lab1", x: 110, y: 20, w: 320, h: 34, color: "gray", label: "普通のブロック", desc: "" },
+      { id: "lab2", x: 560, y: 20, w: 320, h: 34, color: "amber", label: "残差ブロック（ResNet）", desc: "" }
+    ],
+    edges: [ { from: "x1", to: "w1", color: "blue" }, { from: "w1", to: "w2", color: "blue" }, { from: "w2", to: "o1", color: "blue" },
+      { from: "x2", to: "r1", color: "blue" }, { from: "r1", to: "r2", color: "blue" }, { from: "r2", to: "add", color: "blue" },
+      { from: "x2", to: "add", color: "amber", bend: -75, label: "近道（恒等写像）", width: 3 }, { from: "add", to: "o2", color: "green" } ] },
+  5: { w: 900, h: 270, intro: "skip-gram（word2vec）の学習。中心の単語から、周りの単語を当てるように埋め込み表を調整する。",
+    nodes: [
+      { id: "w1", x: 20, y: 40, w: 70, h: 44, color: "gray", label: "王", desc: "文脈の単語（窓の中）。" },
+      { id: "w2", x: 100, y: 40, w: 70, h: 44, color: "gray", label: "は", desc: "文脈の単語。" },
+      { id: "w3", x: 180, y: 40, w: 70, h: 44, color: "amber", label: "城", desc: "中心の単語。この単語のベクトルから、周りの単語を予測する。" },
+      { id: "w4", x: 260, y: 40, w: 70, h: 44, color: "gray", label: "に", desc: "文脈の単語。" },
+      { id: "w5", x: 340, y: 40, w: 70, h: 44, color: "gray", label: "住む", desc: "文脈の単語（窓の幅 2 なら、中心から 2 語まで）。" },
+      { id: "E", x: 110, y: 150, w: 210, h: 80, color: "blue", label: "埋め込み表 E", sub: "語彙数 × d 個の数（学習で変わる）", desc: "1 行＝1 単語。one-hot の番号で行を選ぶだけなので「表引き」と同じ。この表の中身を学習で動かす。" },
+      { id: "v", x: 380, y: 160, w: 110, h: 60, color: "amber", label: "城のベクトル", sub: "d 個の数", desc: "中心単語の行を取り出したもの。これが埋め込みベクトル。" },
+      { id: "pred", x: 540, y: 150, w: 170, h: 80, color: "violet", label: "周りの単語を予測", sub: "「王」「は」「に」「住む」が出やすいか", desc: "ベクトルと各単語の「文脈ベクトル」の内積 → シグモイド。正しい周辺語は確率を上げ、無関係な語（負例）は下げるように E を更新する。" },
+      { id: "res", x: 750, y: 150, w: 140, h: 80, color: "green", label: "似た文脈の単語が\n近づく", desc: "「王」と「女王」は同じような周辺語（城・治める）を持つので、予測がうまくいくようにするとベクトルが似てくる。" }
+    ],
+    edges: [ { from: "w3", to: "E", color: "amber", label: "行を選ぶ" }, { from: "E", to: "v", color: "blue" }, { from: "v", to: "pred", color: "amber" }, { from: "pred", to: "res", color: "violet" },
+      { from: "w3", to: "w1", color: "gray", bend: -40, dashed: true }, { from: "w3", to: "w5", color: "gray", bend: -40, dashed: true, label: "窓（文脈）" } ] },
+  6: { w: 900, h: 250, intro: "RNN は「同じ部品を時刻ごとに使い回す」。左のループを時間方向に引き延ばすと右の形（展開）になる。",
+    nodes: [
+      { id: "x", x: 40, y: 185, shape: "circle", color: "gray", label: "xₜ", desc: "時刻 t の入力（1 文字・1 単語・1 時刻の値）。" },
+      { id: "cell", x: 20, y: 80, w: 100, h: 60, color: "blue", label: "RNN", sub: "h = tanh(Wx·x + Wh·h + b)", desc: "毎時刻、同じ重み Wx, Wh, b を使う。前の隠れ状態 h と今の入力 x から、新しい h を作る。" },
+      { id: "h", x: 48, y: 10, shape: "circle", color: "green", label: "hₜ", desc: "隠れ状態（記憶）。次の時刻にも渡される。" },
+      { id: "eq", x: 170, y: 95, w: 40, h: 30, color: "gray", label: "＝", desc: "" },
+      { id: "x0", x: 250, y: 185, shape: "circle", color: "gray", label: "x₀", desc: "最初の入力。" }, { id: "x1", x: 420, y: 185, shape: "circle", color: "gray", label: "x₁", desc: "2 番目の入力。" }, { id: "x2", x: 590, y: 185, shape: "circle", color: "gray", label: "x₂", desc: "3 番目の入力。" },
+      { id: "c0", x: 230, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 0。h₋₁（ゼロ）と x₀ から h₀ を作る。" }, { id: "c1", x: 400, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 1。h₀ と x₁ から h₁ を作る。h₀ は上書きされる＝古い情報は薄れていく。" }, { id: "c2", x: 570, y: 80, w: 84, h: 56, color: "blue", label: "RNN", sub: "同じ重み", desc: "時刻 2。展開すると「系列の長さぶん深いネット」になり、第4章と同じ勾配消失が起きる。" },
+      { id: "h0", x: 250, y: 10, shape: "circle", color: "green", label: "h₀", desc: "" }, { id: "h1", x: 420, y: 10, shape: "circle", color: "green", label: "h₁", desc: "" }, { id: "h2", x: 590, y: 10, shape: "circle", color: "green", label: "h₂", desc: "" },
+      { id: "out", x: 730, y: 85, w: 150, h: 50, color: "violet", label: "最後の h から答え", desc: "系列全体を読み終えた隠れ状態を使って、分類や次の単語の予測をする。" }
+    ],
+    edges: [ { from: "x", to: "cell", color: "gray" }, { from: "cell", to: "h", color: "green" }, { path: "M110 95 C150 60 150 150 110 125", color: "blue", label: "h を次の時刻へ", labelAt: [175, 160] },
+      { from: "x0", to: "c0", color: "gray" }, { from: "x1", to: "c1", color: "gray" }, { from: "x2", to: "c2", color: "gray" },
+      { from: "c0", to: "h0", color: "green" }, { from: "c1", to: "h1", color: "green" }, { from: "c2", to: "h2", color: "green" },
+      { from: "c0", to: "c1", color: "blue", label: "h₀" }, { from: "c1", to: "c2", color: "blue", label: "h₁" }, { from: "c2", to: "out", color: "violet", label: "h₂" } ] },
+  7: { w: 900, h: 300, intro: "LSTM のセル（Colah の解説図の構成）。上の太い線が記憶セル c。3 つのゲートが流れを制御する。体験①のスライダーを動かすと、ゲートの色の濃さが変わります。",
+    nodes: [
+      { id: "cprev", x: 20, y: 40, shape: "circle", color: "amber", label: "cₜ₋₁", desc: "前の時刻の記憶セル。LSTM の「長期記憶」。" },
+      { id: "mulf", x: 250, y: 46, shape: "op", color: "amber", label: "×", desc: "忘却ゲート f を掛ける。f=1 なら全部残す、f=0 なら全部消す。" },
+      { id: "add", x: 480, y: 46, shape: "op", color: "amber", label: "+", desc: "新しい情報 i×g を足す。掛け算と足し算だけなので、勾配はここを素通りできる（残差接続と同じ）。" },
+      { id: "cnext", x: 830, y: 40, shape: "circle", color: "amber", label: "cₜ", desc: "新しい記憶セル。cₜ = f·cₜ₋₁ + i·g。" },
+      { id: "f", x: 200, y: 140, w: 100, h: 56, color: "rose", label: "忘却ゲート f", sub: "σ(…) 0〜1", desc: "前の記憶をどれだけ残すか。入力 xₜ と前の出力 hₜ₋₁ から決める。1 に近い＝覚えておく。" },
+      { id: "i", x: 330, y: 140, w: 100, h: 56, color: "blue", label: "入力ゲート i", sub: "σ(…) 0〜1", desc: "新しい候補 g をどれだけ書き込むか。" },
+      { id: "g", x: 460, y: 140, w: 100, h: 56, color: "green", label: "候補 g", sub: "tanh(…) −1〜1", desc: "書き込む内容の候補。RNN の隠れ状態と同じ計算。" },
+      { id: "o", x: 620, y: 140, w: 100, h: 56, color: "violet", label: "出力ゲート o", sub: "σ(…) 0〜1", desc: "記憶セルの内容をどれだけ外（hₜ）に出すか。" },
+      { id: "mulo", x: 760, y: 154, shape: "op", color: "violet", label: "×", desc: "hₜ = o × tanh(cₜ)。記憶セルは保ったまま、出す量だけ調整する。" },
+      { id: "hnext", x: 830, y: 140, shape: "circle", color: "green", label: "hₜ", desc: "この時刻の出力（短期記憶）。次の時刻のゲート計算にも使われる。" },
+      { id: "hprev", x: 20, y: 230, shape: "circle", color: "green", label: "hₜ₋₁", desc: "前の時刻の出力。" },
+      { id: "x", x: 120, y: 230, shape: "circle", color: "gray", label: "xₜ", desc: "この時刻の入力。4 つのゲート・候補はすべて [hₜ₋₁, xₜ] から計算される。" }
+    ],
+    edges: [ { from: "cprev", to: "mulf", color: "amber", width: 4 }, { from: "mulf", to: "add", color: "amber", width: 4 }, { from: "add", to: "cnext", color: "amber", width: 4, label: "記憶セルの道（勾配の高速道路）", labelAt: [660, 36] },
+      { from: "f", to: "mulf", color: "rose" }, { from: "i", to: "add", color: "blue", bend: 0 }, { from: "g", to: "add", color: "green" },
+      { path: "M836 70 L836 110 L790 110 L781 150", color: "amber", label: "tanh(cₜ)", labelAt: [810, 105] },
+      { from: "o", to: "mulo", color: "violet" }, { from: "mulo", to: "hnext", color: "green" },
+      { from: "x", to: "f", color: "gray", dashed: true }, { from: "x", to: "i", color: "gray", dashed: true }, { from: "x", to: "g", color: "gray", dashed: true }, { from: "x", to: "o", color: "gray", dashed: true },
+      { from: "hprev", to: "f", color: "gray", dashed: true } ] },
+  8: { w: 900, h: 280, intro: "GRU のセル。記憶セルと隠れ状態を 1 本にまとめ、ゲートは更新 z とリセット r の 2 つ。体験①のスライダーで z の色が変わります。",
+    nodes: [
+      { id: "hprev", x: 20, y: 60, shape: "circle", color: "green", label: "hₜ₋₁", desc: "前の隠れ状態。GRU はこれ 1 本が記憶を兼ねる。" },
+      { id: "x", x: 20, y: 200, shape: "circle", color: "gray", label: "xₜ", desc: "この時刻の入力。" },
+      { id: "r", x: 150, y: 150, w: 110, h: 56, color: "rose", label: "リセット r", sub: "σ(…) 0〜1", desc: "候補 n を作るとき、過去 hₜ₋₁ をどれだけ参照するか。0 に近いと「過去を忘れて今の入力だけで考える」。" },
+      { id: "mulr", x: 300, y: 164, shape: "op", color: "rose", label: "×", desc: "r × hₜ₋₁。" },
+      { id: "n", x: 370, y: 150, w: 110, h: 56, color: "green", label: "候補 n", sub: "tanh(Wx·x + Wh·(r·h) + b)", desc: "新しい隠れ状態の候補。" },
+      { id: "z", x: 370, y: 40, w: 110, h: 56, color: "blue", label: "更新ゲート z", sub: "σ(…) 0〜1", desc: "新しい候補 n にどれだけ置き換えるか。z=0 なら前の状態をそのまま保つ（LSTM の f=1, i=0 と同じ働き）。" },
+      { id: "mix", x: 560, y: 110, w: 160, h: 70, color: "amber", label: "混ぜる", sub: "(1−z)·hₜ₋₁ + z·n", desc: "保つ量と書く量が 1 つのゲート z で連動する。足し算の道があるので勾配が通りやすい。" },
+      { id: "hnext", x: 790, y: 123, shape: "circle", color: "green", label: "hₜ", desc: "新しい隠れ状態＝出力。次の時刻へ渡す。" }
+    ],
+    edges: [ { from: "hprev", to: "mulr", color: "green", bend: 40 }, { from: "r", to: "mulr", color: "rose" }, { from: "mulr", to: "n", color: "rose" }, { from: "x", to: "r", color: "gray", dashed: true }, { from: "x", to: "n", color: "gray", dashed: true, bend: 60 }, { from: "x", to: "z", color: "gray", dashed: true, bend: -40 },
+      { from: "hprev", to: "z", color: "green", dashed: true }, { from: "hprev", to: "mix", color: "green", bend: -90, label: "そのまま (1−z)", width: 3 }, { from: "z", to: "mix", color: "blue" }, { from: "n", to: "mix", color: "green", label: "z・n" }, { from: "mix", to: "hnext", color: "green", width: 3 } ] },
+  9: { w: 900, h: 260, intro: "Seq2Seq（Sutskever らの構成）。エンコーダ RNN が読み、最後の状態だけがデコーダ RNN に渡る。",
+    nodes: [
+      { id: "e1", x: 20, y: 90, w: 80, h: 56, color: "blue", label: "RNN", desc: "エンコーダ：1 語ずつ読む。" }, { id: "e2", x: 120, y: 90, w: 80, h: 56, color: "blue", label: "RNN", desc: "エンコーダ。" }, { id: "e3", x: 220, y: 90, w: 80, h: 56, color: "blue", label: "RNN", desc: "エンコーダ。" },
+      { id: "s1", x: 38, y: 190, shape: "circle", color: "gray", label: "I", desc: "" }, { id: "s2", x: 138, y: 190, shape: "circle", color: "gray", label: "like", desc: "" }, { id: "s3", x: 238, y: 190, shape: "circle", color: "gray", label: "cats", desc: "" },
+      { id: "ctx", x: 340, y: 80, w: 90, h: 76, color: "amber", label: "文脈\nベクトル", desc: "入力文全体の要約。長さは固定（例：128 個の数）。ここがボトルネック：長い文ほど入りきらない。" },
+      { id: "d1", x: 470, y: 90, w: 80, h: 56, color: "green", label: "RNN", desc: "デコーダ：文脈ベクトルを初期状態として受け取り、<BOS> から 1 語ずつ生成する。" }, { id: "d2", x: 570, y: 90, w: 80, h: 56, color: "green", label: "RNN", desc: "直前に出した単語を入力にする（自己回帰）。" }, { id: "d3", x: 670, y: 90, w: 80, h: 56, color: "green", label: "RNN", desc: "" }, { id: "d4", x: 770, y: 90, w: 80, h: 56, color: "green", label: "RNN", desc: "<EOS>（終わり）を出したら止まる。" },
+      { id: "o1", x: 488, y: 10, shape: "circle", color: "violet", label: "私は", desc: "" }, { id: "o2", x: 588, y: 10, shape: "circle", color: "violet", label: "猫が", desc: "" }, { id: "o3", x: 688, y: 10, shape: "circle", color: "violet", label: "好き", desc: "" }, { id: "o4", x: 788, y: 10, shape: "circle", color: "violet", label: "EOS", desc: "" },
+      { id: "b0", x: 488, y: 190, shape: "circle", color: "gray", label: "BOS", desc: "文の始まりの記号。" }
+    ],
+    edges: [ { from: "s1", to: "e1", color: "gray" }, { from: "s2", to: "e2", color: "gray" }, { from: "s3", to: "e3", color: "gray" }, { from: "e1", to: "e2", color: "blue" }, { from: "e2", to: "e3", color: "blue" }, { from: "e3", to: "ctx", color: "blue", width: 3 }, { from: "ctx", to: "d1", color: "amber", width: 3 },
+      { from: "d1", to: "d2", color: "green" }, { from: "d2", to: "d3", color: "green" }, { from: "d3", to: "d4", color: "green" }, { from: "b0", to: "d1", color: "gray" },
+      { from: "d1", to: "o1", color: "violet" }, { from: "d2", to: "o2", color: "violet" }, { from: "d3", to: "o3", color: "violet" }, { from: "d4", to: "o4", color: "violet" },
+      { from: "o1", to: "d2", color: "violet", dashed: true, bend: -20 }, { from: "o2", to: "d3", color: "violet", dashed: true, bend: -20 }, { from: "o3", to: "d4", color: "violet", dashed: true, bend: -20, label: "出した語を次の入力へ" } ] },
+  10: { w: 900, h: 290, intro: "Attention つき Seq2Seq（Bahdanau らの構成）。デコーダは毎回、エンコーダの全状態を重み付きで見直す。",
+    nodes: [
+      { id: "h1", x: 20, y: 200, w: 70, h: 50, color: "blue", label: "h₁", sub: "The", desc: "エンコーダの各時刻の状態。Seq2Seq では最後の 1 つしか使わなかったが、Attention では全部を残しておく（Key と Value）。" }, { id: "h2", x: 110, y: 200, w: 70, h: 50, color: "blue", label: "h₂", sub: "cat", desc: "" }, { id: "h3", x: 200, y: 200, w: 70, h: 50, color: "blue", label: "h₃", sub: "sat", desc: "" }, { id: "h4", x: 290, y: 200, w: 70, h: 50, color: "blue", label: "h₄", sub: "down", desc: "" },
+      { id: "score", x: 60, y: 100, w: 260, h: 50, color: "violet", label: "スコア → softmax → 重み α", sub: "α₁ … α₄（合計 1）", desc: "デコーダの今の状態（Query）と各 hᵢ（Key）の似ている度合いをスコアにし、softmax で合計 1 の重みにする。" },
+      { id: "ctx", x: 400, y: 100, w: 130, h: 50, color: "amber", label: "文脈 cₜ", sub: "Σ αᵢ·hᵢ", desc: "重み付き平均。注目した単語の情報が多く混ざる。出力 1 語ごとに作り直す＝固定長のボトルネックが無くなる。" },
+      { id: "dec", x: 590, y: 90, w: 130, h: 70, color: "green", label: "デコーダ", sub: "状態 sₜ（Query）", desc: "直前の状態と文脈 cₜ から次の単語を決める。sₜ が「いま何を探しているか」（Query）。" },
+      { id: "out", x: 770, y: 100, w: 110, h: 50, color: "rose", label: "出力語", sub: "「座った」", desc: "生成した単語。次の時刻の入力にもなる。" },
+      { id: "q", x: 590, y: 200, w: 130, h: 50, color: "gray", label: "前の出力語", sub: "「猫は」", desc: "" }
+    ],
+    edges: [ { from: "h1", to: "score", color: "blue", label: "α₁ 0.1", labelAt: [50, 175] }, { from: "h2", to: "score", color: "blue" }, { from: "h3", to: "score", color: "blue", width: 4, label: "α₃ 0.7", labelAt: [320, 178] }, { from: "h4", to: "score", color: "blue" },
+      { from: "score", to: "ctx", color: "violet" }, { from: "ctx", to: "dec", color: "amber", width: 3 }, { from: "dec", to: "out", color: "green" }, { from: "q", to: "dec", color: "gray" },
+      { from: "dec", to: "score", color: "green", dashed: true, bend: -70, label: "Query：何を探す？" } ] },
+  11: { w: 900, h: 300, intro: "Transformer の 1 ブロック（Vaswani らの図の構成）。これを N 個積む。各部品をクリックしてみましょう。",
+    nodes: [
+      { id: "emb", x: 20, y: 110, w: 130, h: 80, color: "gray", label: "単語埋め込み\n+ 位置", sub: "各単語 d 個の数", desc: "第5章の埋め込みに、位置エンコーディング（sin/cos）を足す。Attention 自体は語順を知らないので、ここで「何番目か」を混ぜる。" },
+      { id: "mha", x: 200, y: 100, w: 150, h: 100, color: "blue", label: "マルチヘッド\n自己注意", sub: "全単語 × 全単語", desc: "各単語が Query になり、文中の全単語（Key）との関係を見て Value を集める。ヘッドごとに別の観点。第10章の計算を文内で行う。" },
+      { id: "add1", x: 385, y: 136, shape: "op", color: "amber", label: "⊕", desc: "残差接続（第4章）：x + Attention(x)。深く積んでも勾配が通る。" },
+      { id: "ln1", x: 430, y: 120, w: 90, h: 60, color: "violet", label: "正規化", sub: "LayerNorm", desc: "各単語のベクトルの平均・ばらつきを整え、学習を安定させる。" },
+      { id: "ffn", x: 560, y: 100, w: 150, h: 100, color: "green", label: "MLP（各単語ごと）", sub: "第2章の小さなネット", desc: "位置ごとに同じ 2 層 MLP を通す。「単語同士の会話（注意）」の後に「各単語が自分で考える」部分。" },
+      { id: "add2", x: 745, y: 136, shape: "op", color: "amber", label: "⊕", desc: "もう 1 つの残差接続：x + MLP(x)。" },
+      { id: "ln2", x: 790, y: 120, w: 90, h: 60, color: "violet", label: "正規化", sub: "LayerNorm", desc: "" },
+      { id: "n", x: 200, y: 235, w: 680, h: 44, color: "gray", label: "← このブロックを N 個（GPT-2 小型版で 12 個、大きなモデルで 100 個近く）積み重ねる →", desc: "各ブロックの重みは別。下の層ほど文法的・上の層ほど意味的な関係を見る傾向がある。" }
+    ],
+    edges: [ { from: "emb", to: "mha", color: "blue", label: "x" }, { from: "mha", to: "add1", color: "blue" }, { from: "emb", to: "add1", color: "amber", bend: -150, dashed: true, label: "残差（近道）", labelAt: [280, 52] }, { from: "add1", to: "ln1", color: "amber" }, { from: "ln1", to: "ffn", color: "violet" }, { from: "ffn", to: "add2", color: "green" }, { from: "ln1", to: "add2", color: "amber", bend: -150, dashed: true, label: "残差（近道）", labelAt: [640, 52] }, { from: "add2", to: "ln2", color: "amber" } ] },
+  12: { w: 900, h: 300, intro: "BERT の事前学習（穴埋め）と、その後の使い方（ファインチューニング）。",
+    nodes: [
+      { id: "t0", x: 20, y: 210, w: 64, h: 44, color: "violet", label: "[CLS]", desc: "文の先頭に付ける特別な記号。この位置の出力を「文全体の要約」として分類に使う。" }, { id: "t1", x: 94, y: 210, w: 56, h: 44, color: "gray", label: "私", desc: "" }, { id: "t2", x: 160, y: 210, w: 56, h: 44, color: "gray", label: "は", desc: "" }, { id: "t3", x: 226, y: 210, w: 76, h: 44, color: "amber", label: "[MASK]", desc: "隠された単語。元は「牛乳」。BERT は左右両方の文脈からこれを当てる。" }, { id: "t4", x: 312, y: 210, w: 56, h: 44, color: "gray", label: "を", desc: "" }, { id: "t5", x: 378, y: 210, w: 64, h: 44, color: "gray", label: "飲む", desc: "右側の文脈。「飲む」があるので「パン」より「牛乳」が有力。" }, { id: "t6", x: 452, y: 210, w: 64, h: 44, color: "violet", label: "[SEP]", desc: "文の区切り記号。" },
+      { id: "bert", x: 20, y: 100, w: 500, h: 70, color: "blue", label: "Transformer エンコーダ × 12（BERT）", sub: "全単語が全単語を見る（双方向）", desc: "第11章のブロックを 12 個積んだもの。因果マスクが無いので、各位置は左右すべてを見られる。" },
+      { id: "pm", x: 226, y: 10, w: 110, h: 60, color: "amber", label: "予測：牛乳", sub: "語彙全体の確率", desc: "[MASK] の位置の出力ベクトルから、語彙全体の softmax で元の単語を当てる。正解は元の文に書いてあるのでラベル不要。" },
+      { id: "cls", x: 20, y: 10, w: 150, h: 60, color: "violet", label: "[CLS] の出力", sub: "文のベクトル", desc: "文全体の意味をまとめたベクトル。ファインチューニングではここに小さな分類器を付ける。" },
+      { id: "ft", x: 600, y: 60, w: 280, h: 150, color: "green", label: "ファインチューニング", sub: "少量のラベル付きデータで追加学習", desc: "事前学習済みの BERT に、感情分類・質問応答などの小さな出力層を付けて少しだけ学習し直す。言葉の知識は事前学習で身についているので、少ないデータで高性能。" }
+    ],
+    edges: [ { from: "t0", to: "bert", color: "violet" }, { from: "t1", to: "bert", color: "gray" }, { from: "t2", to: "bert", color: "gray" }, { from: "t3", to: "bert", color: "amber", width: 3 }, { from: "t4", to: "bert", color: "gray" }, { from: "t5", to: "bert", color: "gray" }, { from: "t6", to: "bert", color: "violet" },
+      { from: "bert", to: "pm", color: "amber", width: 3 }, { from: "bert", to: "cls", color: "violet" }, { from: "cls", to: "ft", color: "green", bend: -60, dashed: true, label: "分類などに使う" } ] },
+  13: { w: 900, h: 290, intro: "GPT の生成（自己回帰）。デコーダ型 Transformer が「次の単語」の確率を出し、選んだ語を末尾に足して繰り返す。",
+    nodes: [
+      { id: "t1", x: 20, y: 210, w: 70, h: 44, color: "gray", label: "今日", desc: "入力の単語列（プロンプト）。" }, { id: "t2", x: 100, y: 210, w: 56, h: 44, color: "gray", label: "は", desc: "" }, { id: "t3", x: 166, y: 210, w: 70, h: 44, color: "gray", label: "天気", desc: "" }, { id: "t4", x: 246, y: 210, w: 56, h: 44, color: "gray", label: "が", desc: "" }, { id: "t5", x: 312, y: 210, w: 76, h: 44, color: "amber", label: "？", desc: "ここに来る単語を当てる。" },
+      { id: "gpt", x: 20, y: 100, w: 370, h: 70, color: "blue", label: "Transformer デコーダ × N（GPT）", sub: "因果マスク：各語は左側しか見ない", desc: "第11章のブロックに「未来を見ない」マスクを付けたもの。学習時は文中のすべての位置で同時に「次の語」を当てる練習ができる。" },
+      { id: "dist", x: 450, y: 60, w: 200, h: 150, color: "violet", label: "次の単語の確率", sub: "良い 0.41 / 悪い 0.22 / 晴れ 0.15 …", desc: "語彙全体（数万語）に対する softmax。温度を下げると上位に集中、上げると平ら。" },
+      { id: "pick", x: 700, y: 110, w: 100, h: 50, color: "green", label: "1 語選ぶ", sub: "最大 or くじ引き", desc: "貪欲法なら最大確率、サンプリングなら確率に従って選ぶ。" },
+      { id: "app", x: 700, y: 210, w: 180, h: 44, color: "amber", label: "末尾に足して繰り返す", desc: "選んだ単語を入力列の末尾に追加し、また「次は？」を聞く。<EOS> が出るか上限まで続ける。これが ChatGPT が 1 語ずつ文字を出す理由。" }
+    ],
+    edges: [ { from: "t1", to: "gpt", color: "gray" }, { from: "t2", to: "gpt", color: "gray" }, { from: "t3", to: "gpt", color: "gray" }, { from: "t4", to: "gpt", color: "gray" }, { from: "gpt", to: "dist", color: "blue", width: 3 }, { from: "dist", to: "pick", color: "violet" }, { from: "pick", to: "app", color: "green" }, { from: "app", to: "t5", color: "amber", label: "「良い」", width: 3 } ] }
+};

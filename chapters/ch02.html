@@ -27,6 +27,25 @@
 </section>
 
 <section class="card">
+  <h2>まず：活性化関数の形を見る</h2>
+  <div class="canvas-row">
+    <div>
+      <canvas id="actc" width="520" height="260"></canvas>
+      <p class="canvas-caption">実線＝関数の形、点線＝その傾き（勾配）。シグモイド・tanh は入力が大きいと傾きが 0 に近づく（勾配が消えやすい）。ReLU は正の側で傾き 1 のまま。</p>
+    </div>
+    <div>
+      <p><b>なぜ「曲げる」必要があるのか</b></p>
+      <p>線形（直線の式）を何回合成しても直線のままです。各ニューロンの出力をこれらの関数で曲げることで、直線の部品を組み合わせて曲がった境界が作れます。</p>
+      <ul>
+        <li><b>シグモイド</b> σ(x)=1/(1+e⁻ˣ)：0〜1。確率の出力に使う</li>
+        <li><b>tanh</b>：−1〜1。シグモイドを上下に伸ばした形</li>
+        <li><b>ReLU</b> max(0, x)：負は 0、正はそのまま。今の主流。計算が速く勾配が消えにくい</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="card">
   <h2>体験：隠れ層の数・活性化関数を変えて学習する</h2>
   <div class="controls">
     <label>問題：
@@ -94,6 +113,7 @@
 
 </main>
 <script src="../assets/js/content.js"></script>
+<script src="../assets/js/diagrams.js"></script>
 <script src="../assets/js/common.js"></script>
 <script>
 (function () {
@@ -156,6 +176,21 @@
   function showActs() { var p = pts[rng.int(pts.length)], f = forward(p.x, p.y); anim.setActs([[p.x, p.y], f.h, [f.out]]); }
   function accuracy() { var c = 0; pts.forEach(function (p) { if ((forward(p.x, p.y).out > 0.5 ? 1 : 0) === p.t) c++; }); return c / pts.length; }
 
+  (function drawAct() {
+    var ac = $("actc"), x = ac.getContext("2d"), W = ac.width, H = ac.height, L = 40, R = 10, T = 10, B = 26;
+    var px = function (v) { return L + (v + 4) / 8 * (W - L - R); }, py = function (v) { return T + (1.5 - v) / 3 * (H - T - B); };
+    x.strokeStyle = "#e5e7eb"; x.beginPath(); x.moveTo(px(0), T); x.lineTo(px(0), H - B); x.moveTo(L, py(0)); x.lineTo(W - R, py(0)); x.stroke();
+    x.fillStyle = "#6b7280"; x.font = "11px sans-serif"; x.textAlign = "center"; [-4, -2, 0, 2, 4].forEach(function (v) { x.fillText(v, px(v), H - 8); }); x.textAlign = "right"; [-1, 0, 1].forEach(function (v) { x.fillText(v, L - 4, py(v) + 4); });
+    var fns = [{ n: "シグモイド", c: "#dc2626", f: DL.sigmoid, d: function (v) { var s = DL.sigmoid(v); return s * (1 - s); } }, { n: "tanh", c: "#2563eb", f: Math.tanh, d: function (v) { var t = Math.tanh(v); return 1 - t * t; } }, { n: "ReLU", c: "#16a34a", f: function (v) { return Math.max(0, v); }, d: function (v) { return v > 0 ? 1 : 0; } }];
+    fns.forEach(function (fn, i) {
+      [["f", 2.5, []], ["d", 1.5, [4, 4]]].forEach(function (m) {
+        x.strokeStyle = fn.c; x.lineWidth = m[1]; x.setLineDash(m[2]); x.beginPath();
+        for (var k = 0; k <= 200; k++) { var v = -4 + 8 * k / 200, y = Math.min(1.5, fn[m[0]](v)); if (k === 0) x.moveTo(px(v), py(y)); else x.lineTo(px(v), py(y)); }
+        x.stroke();
+      });
+      x.setLineDash([]); x.fillStyle = fn.c; x.textAlign = "left"; x.font = "bold 12px sans-serif"; x.fillText(fn.n, L + 8 + i * 100, T + 14);
+    });
+  })();
   var cv = $("plane"), ctx = cv.getContext("2d");
   function draw() {
     var img = ctx.createImageData(cv.width, cv.height), step = 5;

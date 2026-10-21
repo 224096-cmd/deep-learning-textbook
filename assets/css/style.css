@@ -270,3 +270,21 @@ input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius
 @media (max-width: 640px) {
   .controls.toolbar label.field, .controls.toolbar label.field-range { min-width: 100%; }
 }
+
+/* ---------- しくみの図 ---------- */
+.arch { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin: 10px 0; }
+.arch-svg { width: 100%; height: auto; display: block; padding: 10px 6px 4px; font-family: inherit; }
+.arch-label { font-size: 13px; font-weight: 600; }
+.arch-label.op { font-size: 15px; }
+.arch-sub { font-size: 11px; }
+.arch-edge-label { font-size: 11.5px; font-weight: 600; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.arch-node.clickable { cursor: pointer; }
+.arch-node.clickable:hover rect, .arch-node.clickable:hover circle { filter: brightness(0.95); stroke-width: 3; }
+.arch-node.selected rect, .arch-node.selected circle { stroke-width: 3.5; filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.5)); }
+.arch-desc { background: #f8fafc; border-top: 1px solid var(--border); padding: 10px 16px; min-height: 3.6em; }
+.arch-desc-title { margin: 0 0 2px; font-weight: 700; color: var(--accent-dark); }
+.arch-desc-text { margin: 0; font-size: 0.95rem; color: #334155; }
+.refs { margin-top: 12px; font-size: 0.85rem; color: #475569; }
+.refs-title { font-weight: 700; color: #6d28d9; margin-bottom: 2px; }
+.refs ul { margin: 0; padding-left: 18px; }
+.refs li { margin: 2px 0; }
